@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+main.js
+*.js.map
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Obsidian
+data.json
+
+# Environment
+.env
+.env.*
+
+# npm
+npm-debug.log*
+
+# Training data (generated at runtime)
+_training/
