@@ -1,0 +1,10 @@
+{
+  "id": "note-merger",
+  "name": "Note Merger",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Merge overlapping notes with AI. Zero information loss.",
+  "author": "Nishant bhickta",
+  "authorUrl": "https://github.com/bhickta",
+  "isDesktopOnly": true
+}

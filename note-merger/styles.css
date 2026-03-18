@@ -1,0 +1,389 @@
+/* Note Merger Premium Aesthetics */
+.note-merger-modal {
+  width: 95vw;
+  max-width: 1400px;
+  height: 90vh;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.note-merger-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0;
+  background: var(--background-primary);
+}
+
+.note-merger-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--background-secondary-alt);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.note-merger-header h2 {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-weight: 600;
+  color: var(--text-normal);
+  font-size: 1.4em;
+}
+
+.note-merger-header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.note-merger-score-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.note-merger-score-badge.pass {
+  background: linear-gradient(135deg, rgba(60, 179, 113, 0.2) 0%, rgba(60, 179, 113, 0.1) 100%);
+  color: #3cb371;
+  border: 1px solid rgba(60, 179, 113, 0.4);
+}
+
+.note-merger-score-badge.fail {
+  background: linear-gradient(135deg, rgba(255, 99, 71, 0.2) 0%, rgba(255, 99, 71, 0.1) 100%);
+  color: #ff6347;
+  border: 1px solid rgba(255, 99, 71, 0.4);
+}
+
+.note-merger-missing-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--background-primary-alt);
+  min-height: 40px;
+}
+
+.note-merger-fact-pill {
+  background: rgba(255, 99, 71, 0.1);
+  border: 1px solid rgba(255, 99, 71, 0.3);
+  color: #ff6347;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.75em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.note-merger-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  flex-grow: 1;
+  min-height: 0;
+  background: var(--background-primary);
+}
+
+.note-merger-pane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--background-modifier-border);
+}
+
+.note-merger-pane:last-child {
+  border-right: none;
+}
+
+.note-merger-pane-header {
+  padding: 10px 16px;
+  background: var(--background-secondary);
+  font-weight: 600;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--background-modifier-border);
+  letter-spacing: 0.1em;
+}
+
+.note-merger-pane-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 16px;
+  font-family: var(--font-monospace);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  background: var(--background-primary);
+}
+
+textarea.note-merger-editor {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  padding: 16px;
+  outline: none;
+}
+
+textarea.note-merger-editor:focus {
+  background: rgba(var(--interactive-accent-rgb), 0.02);
+}
+
+.note-merger-judge-feedback {
+  background: var(--background-secondary-alt);
+  padding: 16px 24px;
+  border-top: 1px solid var(--background-modifier-border);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.note-merger-feedback-list {
+  margin: 8px 0 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-merger-issue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+}
+
+.note-merger-jump-btn {
+  background: var(--interactive-accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.note-merger-jump-btn:hover {
+  opacity: 0.8;
+}
+
+.note-merger-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--background-secondary-alt);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.note-merger-footer button {
+  min-width: 120px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-normal);
+  padding: 4px 0;
+}
+
+details summary:hover {
+  color: var(--interactive-accent);
+}
+
+/* Batch Merge Modal */
+.note-merger-batch-modal {
+  max-width: 600px;
+}
+
+.note-merger-batch-count {
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.note-merger-batch-list {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.note-merger-batch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.note-merger-batch-item:hover {
+  background: var(--background-secondary-alt);
+}
+
+.note-merger-batch-name {
+  font-weight: 600;
+  color: var(--text-normal);
+  flex-shrink: 0;
+}
+
+.note-merger-batch-path {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-merger-batch-remove {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 1em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.note-merger-batch-remove:hover {
+  background: rgba(255, 99, 71, 0.15);
+  color: #ff6347;
+}
+
+/* Sidebar Merge Queue */
+.note-merger-queue-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+.note-merger-queue-header {
+  margin-bottom: 16px;
+}
+
+.note-merger-queue-header h4 {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.note-merger-drop-zone {
+  border: 2px dashed var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  background: var(--background-secondary);
+}
+
+.note-merger-drop-zone.drag-over {
+  border-color: var(--interactive-accent);
+  background: rgba(var(--interactive-accent-rgb), 0.1);
+  color: var(--interactive-accent);
+}
+
+.note-merger-drop-icon {
+  font-size: 2em;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.note-merger-drop-text {
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.note-merger-drop-zone.small {
+  padding: 12px;
+  margin-top: 8px;
+  border-width: 1px;
+}
+
+.note-merger-queue-count {
+  font-weight: 600;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin: 12px 0 8px 0;
+}
+
+.note-merger-queue-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.note-merger-queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.note-merger-queue-name {
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-merger-queue-remove {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.note-merger-queue-remove:hover {
+  background: rgba(255, 99, 71, 0.15);
+  color: #ff6347;
+}
+
+.note-merger-queue-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-merger-queue-merge-btn {
+  width: 100%;
+}
+
+.note-merger-queue-clear-btn {
+  width: 100%;
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+}
+
+.note-merger-queue-clear-btn:hover {
+  background: var(--background-modifier-error-hover);
+}
