@@ -12,8 +12,9 @@ export class KeyManager {
     }
 
     async getValidKey(): Promise<string> {
-        const rawKeys = this.settings.apiKeys || this.settings.geminiApiKeys;
-        const keys = rawKeys.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        let rawKeys = this.settings.providerApiKeys[this.settings.provider];
+        if (!rawKeys && this.settings.provider === "gemini") rawKeys = this.settings.apiKeys || this.settings.geminiApiKeys;
+        const keys = (rawKeys || "").split("\n").map(k => k.trim()).filter(k => k.length > 0);
 
         if (keys.length === 0) {
             throw new Error("No API keys configured. Add keys in Note Merger settings.");

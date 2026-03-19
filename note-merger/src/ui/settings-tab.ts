@@ -37,17 +37,25 @@ export class NoteMergerSettingTab extends PluginSettingTab {
           .addText(t => t.setValue(this.plugin.settings.customBaseUrl).onChange(async v => { this.plugin.settings.customBaseUrl = v; await this.plugin.saveSettings(); }));
     }
 
+    const currentProvider = this.plugin.settings.provider;
     new Setting(el)
-      .setName("API Keys")
+      .setName(`${currentProvider.toUpperCase()} API Keys`)
       .setDesc("One key per line. Rate-limited keys auto-suspend for 24 h.")
       .addTextArea(t => {
           t.setPlaceholder("sk-...");
-          const keys = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
-          t.setValue(keys).onChange(async v => { this.plugin.settings.apiKeys = v; await this.plugin.saveSettings(); });
+          // Fallback legacy logic if exact provider key is empty but we have an old key
+          let keys = this.plugin.settings.providerApiKeys[currentProvider];
+          if (!keys && currentProvider === "gemini") keys = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+          if (!keys) keys = "";
+          t.setValue(keys).onChange(async v => {
+             this.plugin.settings.providerApiKeys[currentProvider] = v;
+             await this.plugin.saveSettings();
+          });
       })
       .addButton(btn => btn.setButtonText("Validate").onClick(async () => {
-        const raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
-        const keys = raw.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        let raw = this.plugin.settings.providerApiKeys[currentProvider];
+        if (!raw && currentProvider === "gemini") raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+        const keys = (raw || "").split("\n").map(k => k.trim()).filter(k => k.length > 0);
         if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Validate"), 2000); return; }
         btn.setButtonText("Testing…"); btn.setDisabled(true);
         try {
@@ -61,7 +69,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         } catch { btn.setButtonText("❌ Error"); }
         btn.setDisabled(false); setTimeout(() => btn.setButtonText("Validate"), 3000);
       }));
-    
+
     // Style the textarea explicitly since Obsidian's styling might not apply to the new one directly
     setTimeout(() => {
         const ta = el.querySelector("textarea");
@@ -73,8 +81,9 @@ export class NoteMergerSettingTab extends PluginSettingTab {
 
     new Setting(el).setName("Refresh available models").setDesc("Fetch the latest list of models from your provider.")
       .addButton(btn => btn.setButtonText("Refresh").onClick(async () => {
-        const raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
-        const keys = raw.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        let raw = this.plugin.settings.providerApiKeys[currentProvider];
+        if (!raw && currentProvider === "gemini") raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+        const keys = (raw || "").split("\n").map(k => k.trim()).filter(k => k.length > 0);
         if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Refresh"), 2000); return; }
         btn.setButtonText("Fetching..."); btn.setDisabled(true);
         try {

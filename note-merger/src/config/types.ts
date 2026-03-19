@@ -3,7 +3,8 @@ import { MASTER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
 export interface PluginSettings {
   geminiApiKey: string;
   geminiApiKeys: string;
-  apiKeys: string; // standard multi-provider keys
+  apiKeys: string; // Deprecated, use providerApiKeys
+  providerApiKeys: Record<string, string>; // Maps provider name to newline-separated keys
   provider: "gemini" | "zhipu" | "openai" | "groq" | "together" | "deepseek" | "openrouter" | "custom";
   customBaseUrl: string;
   failedKeys: Record<string, number>;
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   geminiApiKey: "",
   geminiApiKeys: "",
   apiKeys: "",
+  providerApiKeys: {},
   provider: "gemini",
   customBaseUrl: "https://api.openai.com/v1",
   failedKeys: {},
