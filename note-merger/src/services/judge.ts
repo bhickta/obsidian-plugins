@@ -12,7 +12,12 @@ async function callWithRetry(keyManager: KeyManager, modelName: string, systemPr
             return await model.generateContent(prompt);
         } catch (e: any) {
             const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
+            if (msg.includes("developer instruction is not enabled")) {
+                console.warn(`Model ${modelName} doesn't support system instructions. Prepending to prompt.`);
+                const fallbackModel = genAI.getGenerativeModel({ model: modelName });
+                return await fallbackModel.generateContent(systemPrompt + "\n\n" + prompt);
+            }
+            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate") || msg.includes("503")) {
                 console.warn(`[Judge attempt ${attempt}/${maxAttempts}] Rate limited: ${apiKey.substring(0, 6)}***`);
                 await keyManager.markKeyFailed(apiKey);
                 if (attempt < maxAttempts) {

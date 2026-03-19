@@ -107,11 +107,18 @@ export default class NoteMergerPlugin extends Plugin {
         } catch (e) {
             this.setStatus("");
             const msg = (e as Error).message || String(e);
-            const m = msg.toLowerCase();
-            if (msg.includes("429") || m.includes("quota")) new Notice("⚠️ API rate limit. Wait or check quota.", 8000);
-            else if (msg.includes("403") || m.includes("api key")) new Notice("⚠️ Invalid API key.", 8000);
+            console.error("Merge error:", msg); // Keep in console for debugging
+
+            // Extract the actual Google API error message if present
+            let displayMsg = msg;
+            const match = msg.match(/\[([^\]]+)\]\s(.*)/);
+            if (match && match[2]) displayMsg = match[2];
+
+            if (msg.includes("429") || msg.includes("quota")) new Notice("⚠️ API rate limit. Wait or check quota.", 8000);
+            else if (msg.includes("403") && !msg.includes("key")) new Notice("⚠️ 403 Forbidden. Check permissions.", 8000);
+            else if (msg.toLowerCase().includes("api key not valid")) new Notice("⚠️ Invalid API key.", 8000);
             else if (msg.includes("404")) new Notice("⚠️ Model not found. Check settings.", 8000);
-            else new Notice(`Merge failed: ${msg}`, 8000);
+            else new Notice(`Merge failed: ${displayMsg}`, 10000);
         }
     }
 
