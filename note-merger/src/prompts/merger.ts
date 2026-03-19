@@ -28,7 +28,7 @@ If sources have YAML frontmatter, merge it at the top between --- markers:
 - Arrays (like Sub_topics) -> combine into a standard YAML list (- item)
 - Strings (like Category, Name) -> combined string separated by semicolons
 - Single Line Summary -> output exactly ONE merged sentence capturing everything
-- Recall Question -> format as a literal block scalar using the pipe operator (|) followed by a numbered list on new lines
+- Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
 
 --- OUTPUT TARGET ---
 Final line exactly: SUGGESTED_FILENAME: <3-8 word Title Case name>
