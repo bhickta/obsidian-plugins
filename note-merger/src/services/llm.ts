@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PluginSettings } from "../config/types";
 
 export async function executeChatCompletion(
@@ -9,21 +8,34 @@ export async function executeChatCompletion(
     userPrompt: string
 ): Promise<string> {
     if (settings.provider === "gemini") {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const m = genAI.getGenerativeModel({ model: model, systemInstruction: systemPrompt });
-        try {
-            const res = await m.generateContent(userPrompt);
-            return res.response.text();
-        } catch (e: any) {
-            const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("developer instruction is not enabled")) {
-                console.warn(`Model ${model} doesn't support system instructions. Prepending to prompt.`);
-                const fallbackModel = genAI.getGenerativeModel({ model: model });
-                const res = await fallbackModel.generateContent(systemPrompt + "\n\n" + userPrompt);
-                return res.response.text();
+        const sendGeminiRequest = async (useSystemInstruction: boolean) => {
+            const body: any = { contents: [{ parts: [{ text: useSystemInstruction ? userPrompt : systemPrompt + "\n\n" + userPrompt }] }] };
+            if (useSystemInstruction) body.systemInstruction = { parts: [{ text: systemPrompt }] };
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                const errMsg = errJson.error?.message || res.statusText;
+                if (res.status === 400 && errMsg.toLowerCase().includes("developer instruction")) {
+                    return "GAMEMODEL_FALLBACK"; // Signal to retry without systemInstruction
+                }
+                throw new Error(`[${res.status} HTTP Error] ${errMsg}`);
             }
-            throw e;
+            const data = await res.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        };
+
+        const firstTry = await sendGeminiRequest(true);
+        if (firstTry === "GAMEMODEL_FALLBACK") {
+            console.warn(`Model ${model} doesn't support system instructions. Prepending to prompt.`);
+            return await sendGeminiRequest(false);
         }
+        return firstTry;
     } else {
         // OpenAI Compatible endpoints (Zhipu/GLM, OpenAI, Custom)
         let baseUrl = settings.customBaseUrl;

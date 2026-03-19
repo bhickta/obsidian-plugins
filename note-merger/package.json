@@ -10,9 +10,6 @@
   "keywords": [],
   "author": "Nishant bhickta",
   "license": "MIT",
-  "dependencies": {
-    "@google/generative-ai": "^0.21.0"
-  },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "builtin-modules": "^5.0.0",
