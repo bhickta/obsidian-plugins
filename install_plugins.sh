@@ -47,26 +47,22 @@ for dir in "$SCRIPT_DIR"/*/; do
     MAIN_JS=""
     STYLES_CSS=""
     
-    # Sometimes esbuild creates a dist folder
-    if [ -f "$dir/dist/main.js" ]; then
-        MAIN_JS="$dir/dist/main.js"
-    elif [ -f "$dir/main.js" ]; then
-        MAIN_JS="$dir/main.js"
-    elif [ -f "$dir/package.json" ]; then
-        # If no main.js, let's try to build it
-        echo "  - No built main.js found. Attempting to build..."
+    # Build if package.json exists
+    if [ -f "$dir/package.json" ]; then
+        echo "  - Building..."
         cd "$dir"
         if [ ! -d "node_modules" ]; then
             npm install || echo "  - Warning: npm install failed"
         fi
         npm run build || echo "  - Warning: npm run build failed"
         cd "$SCRIPT_DIR"
-        
-        if [ -f "$dir/dist/main.js" ]; then
-            MAIN_JS="$dir/dist/main.js"
-        elif [ -f "$dir/main.js" ]; then
-            MAIN_JS="$dir/main.js"
-        fi
+    fi
+
+    # Find built main.js
+    if [ -f "$dir/dist/main.js" ]; then
+        MAIN_JS="$dir/dist/main.js"
+    elif [ -f "$dir/main.js" ]; then
+        MAIN_JS="$dir/main.js"
     fi
     
     if [ -f "$dir/styles.css" ]; then
