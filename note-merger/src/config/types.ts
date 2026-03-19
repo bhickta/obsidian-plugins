@@ -3,6 +3,9 @@ import { MASTER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
 export interface PluginSettings {
   geminiApiKey: string;
   geminiApiKeys: string;
+  apiKeys: string; // standard multi-provider keys
+  provider: "gemini" | "zhipu" | "openai" | "custom";
+  customBaseUrl: string;
   failedKeys: Record<string, number>;
   mergerModel: string;
   judgeModel: string;
@@ -20,6 +23,9 @@ export interface PluginSettings {
 export const DEFAULT_SETTINGS: PluginSettings = {
   geminiApiKey: "",
   geminiApiKeys: "",
+  apiKeys: "",
+  provider: "gemini",
+  customBaseUrl: "https://api.openai.com/v1",
   failedKeys: {},
   mergerModel: "gemini-3.1-pro-preview",
   judgeModel: "",

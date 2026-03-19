@@ -1,22 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { executeChatCompletion } from "./llm";
 import { JudgeFeedback } from "../config";
 import { KeyManager } from "./key-manager";
 
-async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<any> {
-    const maxAttempts = 5;
+async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<string> {
+    const maxAttempts = keyManager.settings.maxRetries || 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const apiKey = await keyManager.getValidKey();
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
         try {
-            return await model.generateContent(prompt);
+            return await executeChatCompletion(keyManager.settings, apiKey, modelName, systemPrompt, prompt);
         } catch (e: any) {
             const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("developer instruction is not enabled")) {
-                console.warn(`Model ${modelName} doesn't support system instructions. Prepending to prompt.`);
-                const fallbackModel = genAI.getGenerativeModel({ model: modelName });
-                return await fallbackModel.generateContent(systemPrompt + "\n\n" + prompt);
-            }
             if (msg.includes("429") || msg.includes("quota") || msg.includes("rate") || msg.includes("503")) {
                 console.warn(`[Judge attempt ${attempt}/${maxAttempts}] Rate limited: ${apiKey.substring(0, 6)}***`);
                 await keyManager.markKeyFailed(apiKey);
@@ -38,7 +31,7 @@ export async function scoreMerge(
     const result = await callWithRetry(keyManager, modelName, systemPrompt, prompt);
 
     try {
-        let text = result.response.text().trim();
+        let text = result.trim();
         if (text.startsWith("\`\`\`json")) text = text.substring(7);
         else if (text.startsWith("\`\`\`")) text = text.substring(3);
         if (text.endsWith("\`\`\`")) text = text.slice(0, -3);

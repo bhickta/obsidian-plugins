@@ -3,7 +3,7 @@ import { PluginSettings } from "../config/types";
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export class KeyManager {
-    private settings: PluginSettings;
+    public settings: PluginSettings;
     private saveSettings: () => Promise<void>;
 
     constructor(settings: PluginSettings, saveSettings: () => Promise<void>) {
@@ -12,8 +12,8 @@ export class KeyManager {
     }
 
     async getValidKey(): Promise<string> {
-        const keys = this.settings.geminiApiKeys
-            .split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        const rawKeys = this.settings.apiKeys || this.settings.geminiApiKeys;
+        const keys = rawKeys.split("\n").map(k => k.trim()).filter(k => k.length > 0);
 
         if (keys.length === 0) {
             throw new Error("No API keys configured. Add keys in Note Merger settings.");

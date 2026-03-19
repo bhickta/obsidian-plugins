@@ -11,51 +11,95 @@ export class NoteMergerSettingTab extends PluginSettingTab {
     el.empty();
     el.createEl("h2", { text: "Note Merger" });
 
-    // ── API ──
-    el.createEl("h3", { text: "API" });
+    // ── Provider & API ──
+    el.createEl("h3", { text: "AI Provider & API" });
+    
+    new Setting(el).setName("Provider").setDesc("Select your AI provider.")
+      .addDropdown(d => d
+        .addOption("gemini", "Google Gemini")
+        .addOption("zhipu", "Zhipu AI (GLM)")
+        .addOption("openai", "OpenAI")
+        .addOption("custom", "Custom (OpenAI-Compatible)")
+        .setValue(this.plugin.settings.provider)
+        .onChange(async v => {
+           this.plugin.settings.provider = v as any;
+           this.plugin.settings.cachedModels = []; // Clear models on switch
+           await this.plugin.saveSettings();
+           this.display();
+        }));
+
+    if (this.plugin.settings.provider === "custom") {
+        new Setting(el).setName("Custom Base URL").setDesc("Your OpenAI-compatible endpoint URL.")
+          .addText(t => t.setValue(this.plugin.settings.customBaseUrl).onChange(async v => { this.plugin.settings.customBaseUrl = v; await this.plugin.saveSettings(); }));
+    }
+
     new Setting(el)
-      .setName("Gemini API keys")
+      .setName("API Keys")
       .setDesc("One key per line. Rate-limited keys auto-suspend for 24 h.")
-      .addTextArea(t => t.setPlaceholder("AIzaSy...\nAIzaSy...")
-        .setValue(this.plugin.settings.geminiApiKeys)
-        .onChange(async v => { this.plugin.settings.geminiApiKeys = v; await this.plugin.saveSettings(); }))
+      .addTextArea(t => {
+          t.setPlaceholder("sk-...");
+          const keys = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+          t.setValue(keys).onChange(async v => { this.plugin.settings.apiKeys = v; await this.plugin.saveSettings(); });
+      })
       .addButton(btn => btn.setButtonText("Validate").onClick(async () => {
-        const keys = this.plugin.settings.geminiApiKeys.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        const raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+        const keys = raw.split("\n").map(k => k.trim()).filter(k => k.length > 0);
         if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Validate"), 2000); return; }
         btn.setButtonText("Testing…"); btn.setDisabled(true);
         try {
-          const { GoogleGenerativeAI } = await import("@google/generative-ai");
+          const { executeChatCompletion } = await import("../services/llm");
           let valid = 0;
           for (const key of keys) {
-            try { await new GoogleGenerativeAI(key).getGenerativeModel({ model: this.plugin.settings.mergerModel }).generateContent("S"); valid++; }
+            try { await executeChatCompletion(this.plugin.settings, key, this.plugin.settings.mergerModel, "test", "test"); valid++; }
             catch {}
           }
           btn.setButtonText(valid > 0 ? `✅ ${valid}/${keys.length} valid` : "❌ All invalid");
         } catch { btn.setButtonText("❌ Error"); }
         btn.setDisabled(false); setTimeout(() => btn.setButtonText("Validate"), 3000);
       }));
-    const ta = el.querySelector("textarea");
-    if (ta) { ta.style.width = "100%"; (ta as HTMLTextAreaElement).rows = 4; ta.style.fontFamily = "var(--font-monospace)"; ta.style.fontSize = "12px"; }
+    
+    // Style the textarea explicitly since Obsidian's styling might not apply to the new one directly
+    setTimeout(() => {
+        const ta = el.querySelector("textarea");
+        if (ta) { ta.style.width = "100%"; ta.rows = 4; ta.style.fontFamily = "var(--font-monospace)"; ta.style.fontSize = "12px"; }
+    }, 0);
 
     // ── Models ──
     el.createEl("h3", { text: "Models" });
 
-    new Setting(el).setName("Refresh available models").setDesc("Fetch the latest list of models from Gemini API.")
+    new Setting(el).setName("Refresh available models").setDesc("Fetch the latest list of models from your provider.")
       .addButton(btn => btn.setButtonText("Refresh").onClick(async () => {
-        const keys = this.plugin.settings.geminiApiKeys.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        const raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
+        const keys = raw.split("\n").map(k => k.trim()).filter(k => k.length > 0);
         if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Refresh"), 2000); return; }
         btn.setButtonText("Fetching..."); btn.setDisabled(true);
         try {
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${keys[0]}`);
-          if (r.ok) {
-            const data = await r.json();
-            const models = data.models.filter((m: any) => m.supportedGenerationMethods?.includes("generateContent")).map((m: any) => m.name.replace("models/", ""));
-            if (models.length > 0) {
-              this.plugin.settings.cachedModels = models;
-              await this.plugin.saveSettings();
-              this.display(); // Refresh UI
-              return;
+          let models: string[] = [];
+          if (this.plugin.settings.provider === "gemini") {
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${keys[0]}`);
+            if (r.ok) {
+              const data = await r.json();
+              models = data.models.filter((m: any) => m.supportedGenerationMethods?.includes("generateContent")).map((m: any) => m.name.replace("models/", ""));
             }
+          } else {
+            // OpenAI Compatible GET /models
+            let baseUrl = this.plugin.settings.customBaseUrl;
+            if (this.plugin.settings.provider === "zhipu") baseUrl = "https://open.bigmodel.cn/api/paas/v4";
+            else if (this.plugin.settings.provider === "openai") baseUrl = "https://api.openai.com/v1";
+            
+            const url = baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models";
+            const r = await fetch(url, { headers: { "Authorization": `Bearer ${keys[0]}` } });
+            if (r.ok) {
+                const data = await r.json();
+                if (data.data) models = data.data.map((m: any) => m.id);
+            }
+          }
+
+          if (models.length > 0) {
+            this.plugin.settings.cachedModels = models;
+            await this.plugin.saveSettings();
+            this.display(); // Refresh UI
+            return;
           }
           btn.setButtonText("❌ Failed");
         } catch { btn.setButtonText("❌ Error"); }

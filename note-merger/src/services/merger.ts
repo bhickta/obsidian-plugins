@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { executeChatCompletion } from "./llm";
 import { KeyManager } from "./key-manager";
 
 export interface MergeResult {
@@ -6,21 +6,14 @@ export interface MergeResult {
     suggestedName: string;
 }
 
-async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<any> {
-    const maxAttempts = 5;
+async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<string> {
+    const maxAttempts = keyManager.settings.maxRetries || 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const apiKey = await keyManager.getValidKey();
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
         try {
-            return await model.generateContent(prompt);
+            return await executeChatCompletion(keyManager.settings, apiKey, modelName, systemPrompt, prompt);
         } catch (e: any) {
             const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("developer instruction is not enabled")) {
-                console.warn(`Model ${modelName} doesn't support system instructions. Prepending to prompt.`);
-                const fallbackModel = genAI.getGenerativeModel({ model: modelName });
-                return await fallbackModel.generateContent(systemPrompt + "\n\n" + prompt);
-            }
             if (msg.includes("429") || msg.includes("quota") || msg.includes("rate") || msg.includes("503")) {
                 console.warn(`[Attempt ${attempt}/${maxAttempts}] Rate limited: ${apiKey.substring(0, 6)}***`);
                 await keyManager.markKeyFailed(apiKey);
@@ -45,7 +38,7 @@ export async function mergeNotes(
 
     const result = await callWithRetry(keyManager, modelName, systemPrompt, prompt);
 
-    let text = result.response.text();
+    let text = result.trim();
     if (text.startsWith("```markdown\n")) { text = text.substring(12); if (text.endsWith("\n```")) text = text.slice(0, -4); }
     else if (text.startsWith("```\n")) { text = text.substring(4); if (text.endsWith("\n```")) text = text.slice(0, -4); }
 
