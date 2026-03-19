@@ -21,9 +21,8 @@ Structure:
 --- 4. DE-DUPLICATION ---
 Merge identical facts. DO NOT repeat information.
 If Source A and Source B describe the same entity (e.g. "Chenab River"), merge ALL their unique sub-facts under ONE single Parent bullet.
-If they list conflicting facts, combine them as densely as possible:
-- For short conflicting names/numbers: use a slash (e.g., Slappar/Slapper; 88/90 km; 168/170 sq.km)
-- For longer conflicting claims: append [also: alternative claim]
+CRITICAL CONFLICT RESOLUTION:
+If sources list conflicting numbers or spelling variants for the SAME entity, YOU MUST combine them using a forward slash (/) (e.g., 3475m/3675m; Slappar/Slapper). NEVER use brackets or words like "[also:]" or "or".
 
 --- 5. MULTIPLE ATOMIC NOTES (CRITICAL) ---
 Instead of one mega-note, you must output entirely separated, distinct atomic notes.
