@@ -6,6 +6,30 @@ export interface MergeResult {
     suggestedName: string;
 }
 
+async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<any> {
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const apiKey = await keyManager.getValidKey();
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
+        try {
+            return await model.generateContent(prompt);
+        } catch (e: any) {
+            const msg = e.message?.toLowerCase() || "";
+            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
+                console.warn(`[Attempt ${attempt}/${maxAttempts}] Rate limited: ${apiKey.substring(0, 6)}***`);
+                await keyManager.markKeyFailed(apiKey);
+                if (attempt < maxAttempts) {
+                    const delay = Math.min(2000 * Math.pow(2, attempt - 1), 30000); // 2s, 4s, 8s, 16s, 30s
+                    console.log(`Waiting ${delay / 1000}s before retry...`);
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            } else { throw e; }
+        }
+    }
+    throw new Error("All API keys exhausted or rate limited. Try again later.");
+}
+
 export async function mergeNotes(
     keyManager: KeyManager, modelName: string, systemPrompt: string,
     sources: string[], hint?: string
@@ -14,22 +38,7 @@ export async function mergeNotes(
     sources.forEach((src, i) => { prompt += `--- SOURCE ${i + 1} ---\n${src}\n\n`; });
     if (hint) prompt += `--- PREVIOUS DRAFT HINT ---\nFix issues:\n${hint}\n\n`;
 
-    let result: any;
-    while (true) {
-        const apiKey = await keyManager.getValidKey();
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
-        try {
-            result = await model.generateContent(prompt);
-            break;
-        } catch (e: any) {
-            const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
-                console.warn(`Key rate limited: ${apiKey.substring(0, 6)}***`);
-                await keyManager.markKeyFailed(apiKey);
-            } else { throw e; }
-        }
-    }
+    const result = await callWithRetry(keyManager, modelName, systemPrompt, prompt);
 
     let text = result.response.text();
     if (text.startsWith("```markdown\n")) { text = text.substring(12); if (text.endsWith("\n```")) text = text.slice(0, -4); }

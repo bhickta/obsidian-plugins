@@ -2,28 +2,35 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { JudgeFeedback } from "../config";
 import { KeyManager } from "./key-manager";
 
+async function callWithRetry(keyManager: KeyManager, modelName: string, systemPrompt: string, prompt: string): Promise<any> {
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const apiKey = await keyManager.getValidKey();
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
+        try {
+            return await model.generateContent(prompt);
+        } catch (e: any) {
+            const msg = e.message?.toLowerCase() || "";
+            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
+                console.warn(`[Judge attempt ${attempt}/${maxAttempts}] Rate limited: ${apiKey.substring(0, 6)}***`);
+                await keyManager.markKeyFailed(apiKey);
+                if (attempt < maxAttempts) {
+                    const delay = Math.min(2000 * Math.pow(2, attempt - 1), 30000);
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            } else { throw e; }
+        }
+    }
+    throw new Error("All API keys exhausted or rate limited. Try again later.");
+}
+
 export async function scoreMerge(
     keyManager: KeyManager, modelName: string, systemPrompt: string,
     sourceA: string, sourceB: string, mergedOutput: string
 ): Promise<JudgeFeedback> {
     const prompt = `--- SOURCE A ---\n${sourceA}\n\n--- SOURCE B ---\n${sourceB}\n\n--- MERGED OUTPUT ---\n${mergedOutput}`;
-
-    let result: any;
-    while (true) {
-        const apiKey = await keyManager.getValidKey();
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
-        try {
-            result = await model.generateContent(prompt);
-            break;
-        } catch (e: any) {
-            const msg = e.message?.toLowerCase() || "";
-            if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
-                console.warn(`Judge key rate limited: ${apiKey.substring(0, 6)}***`);
-                await keyManager.markKeyFailed(apiKey);
-            } else { throw e; }
-        }
-    }
+    const result = await callWithRetry(keyManager, modelName, systemPrompt, prompt);
 
     try {
         let text = result.response.text().trim();
