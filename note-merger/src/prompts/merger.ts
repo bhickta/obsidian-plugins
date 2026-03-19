@@ -39,4 +39,5 @@ For EACH individual file you generate, include YAML frontmatter between --- mark
 - Name -> synthesize ONE short, overarching holistic title for this specific atomic note
 - Single Line Summary -> exactly ONE sentence capturing this atomic note
 - Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
+- Preserve all other custom properties (like Order, Subject, Topic) from matching sources, combining values if conflicting
 `;
