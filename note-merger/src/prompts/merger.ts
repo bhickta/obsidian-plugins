@@ -1,37 +1,35 @@
 export const MASTER_PROMPT = `Expert Knowledge Merger — UPSC exam prep.
-Merge ALL source notes → one ultra-dense Master Note for rapid recall.
+Goal: Merge ALL source notes into ONE ultra-dense, entirely de-duplicated Master Note for rapid recall.
 
---- ZERO LOSS (HIGHEST PRIORITY) ---
-Every fact, date, figure, qualifier, proper noun, example from ALL sources must appear.
-Preserve verbatim: native-language text (Sanskrit/Hindi/Devanagari), qualifiers ("entirely", "only", "first", "as per X"), spelling variants (Jalandhara ≠ Jallandhara), named attributions.
-No external knowledge. No inference.
+--- 1. ZERO INFO LOSS (CRITICAL) ---
+Every fact, date, figure, qualifier, and proper noun from ALL sources must appear.
+Preserve verbatim: native-language text (Hindi/Sanskrit), qualifiers ("only", "first"), and spelling variants (Jalandhara ≠ Jallandhara).
+No external knowledge. No summarization that deletes details.
 
---- DEDUPLICATION ---
-Merge only byte-for-byte identical bullets. When in doubt, keep both.
-- Same entity, different facts → single header, all sub-facts underneath
-- Similar names, different entities → separate entries (disambiguate in parentheses)
-- Near-identical → keep specific version, append [also: variant]
-- Non-contradictory claims → join with semicolon, never "or"
+--- 2. ULTRA DENSE ---
+Telegraphic style: violently omit articles (a, an, the), auxiliaries, and filler words.
+Concatenate related facts with semicolons (;). Be as dense as humanly readable.
 
---- FORMAT ---
-Telegraphic: omit articles, auxiliaries, conjunctions unless ambiguity.
+--- 3. PURE BULLET FORMATTING ---
+Use ONLY standard bullet points (-) and sub-bullets (  -).
+NO headers (#). NO bolding (**). NO colons at the end of parent bullets.
+Structure:
+- Parent Entity Name
+  - Sub-fact
+  - Sub-fact
 
-- **Term**: details (standalone fact)
-- Parent Label (plain, Title Case, no bold, no colon)
-\t- **Child**: details
-\t- **Child**: details
-
-Group 3+ related bullets under natural parent. Max 2 levels. Standalone facts stay flat.
+--- 4. DE-DUPLICATION ---
+Merge identical facts. DO NOT repeat information.
+If Source A and Source B describe the same entity (e.g. "Chenab River"), merge ALL their unique sub-facts under ONE single Parent bullet.
+If they list conflicting variants, combine them: [variant 1 also: variant 2].
 
 --- YAML FRONTMATTER ---
-If any source has YAML frontmatter, output merged frontmatter between --- markers.
-- Preserve every field from every source
-- Arrays → union as YAML list (- notation), no duplicates
-- Strings → combine with semicolons; conflicts → "val1 | val2"
-- Sub_topics: underscore, YAML list
-- Name: holistic title; Single Line Summary: one merged sentence
-- Recall Question: literal block scalar, numbered per source
+If sources have YAML frontmatter, merge it at the top between --- markers:
+- Arrays (like Sub_topics) -> combine into a standard YAML list (- item)
+- Strings (like Category, Name) -> combined string separated by semicolons
+- Single Line Summary -> output exactly ONE merged sentence capturing everything
+- Recall Question -> format as a literal block scalar using the pipe operator (|) followed by a numbered list on new lines
 
---- OUTPUT ---
+--- OUTPUT TARGET ---
 Final line exactly: SUGGESTED_FILENAME: <3-8 word Title Case name>
 Nothing after.`;
