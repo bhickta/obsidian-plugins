@@ -26,7 +26,8 @@ If they list conflicting variants, combine them: [variant 1 also: variant 2].
 --- YAML FRONTMATTER ---
 If sources have YAML frontmatter, merge it at the top between --- markers:
 - Arrays (like Sub_topics) -> combine into a standard YAML list (- item)
-- Strings (like Category, Name) -> combined string separated by semicolons
+- Strings (like Category, Source) -> combined string separated by semicolons
+- Name -> synthesize ONE short, overarching holistic title (e.g. "Chenab River & Chamba Valleys")
 - Single Line Summary -> output exactly ONE merged sentence capturing everything
 - Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
 
