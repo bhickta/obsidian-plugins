@@ -41,6 +41,10 @@ export async function executeChatCompletion(
         let baseUrl = settings.customBaseUrl;
         if (settings.provider === "zhipu") baseUrl = "https://open.bigmodel.cn/api/paas/v4";
         else if (settings.provider === "openai") baseUrl = "https://api.openai.com/v1";
+        else if (settings.provider === "groq") baseUrl = "https://api.groq.com/openai/v1";
+        else if (settings.provider === "together") baseUrl = "https://api.together.xyz/v1";
+        else if (settings.provider === "deepseek") baseUrl = "https://api.deepseek.com/v1";
+        else if (settings.provider === "openrouter") baseUrl = "https://openrouter.ai/api/v1";
 
         const url = baseUrl.endsWith("/") ? baseUrl + "chat/completions" : baseUrl + "/chat/completions";
         const res = await fetch(url, {

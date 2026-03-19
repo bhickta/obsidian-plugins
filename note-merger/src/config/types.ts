@@ -4,7 +4,7 @@ export interface PluginSettings {
   geminiApiKey: string;
   geminiApiKeys: string;
   apiKeys: string; // standard multi-provider keys
-  provider: "gemini" | "zhipu" | "openai" | "custom";
+  provider: "gemini" | "zhipu" | "openai" | "groq" | "together" | "deepseek" | "openrouter" | "custom";
   customBaseUrl: string;
   failedKeys: Record<string, number>;
   mergerModel: string;

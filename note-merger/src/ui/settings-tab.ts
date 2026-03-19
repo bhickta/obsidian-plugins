@@ -19,6 +19,10 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         .addOption("gemini", "Google Gemini")
         .addOption("zhipu", "Zhipu AI (GLM)")
         .addOption("openai", "OpenAI")
+        .addOption("groq", "Groq")
+        .addOption("together", "Together AI")
+        .addOption("deepseek", "DeepSeek")
+        .addOption("openrouter", "OpenRouter")
         .addOption("custom", "Custom (OpenAI-Compatible)")
         .setValue(this.plugin.settings.provider)
         .onChange(async v => {
@@ -86,6 +90,10 @@ export class NoteMergerSettingTab extends PluginSettingTab {
             let baseUrl = this.plugin.settings.customBaseUrl;
             if (this.plugin.settings.provider === "zhipu") baseUrl = "https://open.bigmodel.cn/api/paas/v4";
             else if (this.plugin.settings.provider === "openai") baseUrl = "https://api.openai.com/v1";
+            else if (this.plugin.settings.provider === "groq") baseUrl = "https://api.groq.com/openai/v1";
+            else if (this.plugin.settings.provider === "together") baseUrl = "https://api.together.xyz/v1";
+            else if (this.plugin.settings.provider === "deepseek") baseUrl = "https://api.deepseek.com";
+            else if (this.plugin.settings.provider === "openrouter") baseUrl = "https://openrouter.ai/api/v1";
             
             const url = baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models";
             const r = await fetch(url, { headers: { "Authorization": `Bearer ${keys[0]}` } });
