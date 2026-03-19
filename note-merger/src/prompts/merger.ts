@@ -37,7 +37,8 @@ Immediately after the delimiter, provide the YAML frontmatter for that specific 
 --- YAML FRONTMATTER ---
 For EACH individual file you generate, include YAML frontmatter between --- markers:
 - Arrays (like Sub_topics) -> standard YAML list (- item)
-- For ANY property that has multiple values across sources (like Category, Source, Subject, Order), combine them into a standard YAML list (- item). NEVER combine metadata using semicolons.
+- For ANY property that has multiple values across sources (like Category, Source, Subject), combine them into a standard YAML list (- item). NEVER combine metadata using semicolons.
+- Order -> DO NOT combine into lists. Strictly inherit the single integer Order value exclusively from the FINAL source note (the target file) provided in the prompt, ignoring any orders from earlier sources.
 - Name -> synthesize ONE short, overarching holistic title for this specific atomic note
 - Single Line Summary -> exactly ONE sentence capturing this atomic note
 - Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
