@@ -34,9 +34,9 @@ Immediately after the delimiter, provide the YAML frontmatter for that specific 
 --- YAML FRONTMATTER ---
 For EACH individual file you generate, include YAML frontmatter between --- markers:
 - Arrays (like Sub_topics) -> standard YAML list (- item)
-- Strings (like Category, Source) -> combined string separated by semicolons
+- For ANY property that has multiple values across sources (like Category, Source, Subject, Order), combine them into a standard YAML list (- item). NEVER combine metadata using semicolons.
 - Name -> synthesize ONE short, overarching holistic title for this specific atomic note
 - Single Line Summary -> exactly ONE sentence capturing this atomic note
 - Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
-- Preserve all other custom properties (like Order, Subject, Topic) from matching sources, combining values if conflicting
+- Preserve all other custom properties from matching sources as standard YAML lists if there are multiple.
 `;
