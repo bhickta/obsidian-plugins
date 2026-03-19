@@ -81,6 +81,9 @@ export class MergeReviewModal extends Modal {
             const target = this.sourceAFiles[this.sourceAFiles.length - 1];
             const folderPath = target.parent?.path || "";
             
+            const filesCreated: string[] = [];
+            const filesDeleted: string[] = [];
+
             // Parse for multiple files from the atomic prompt
             const fileBlocks = this.mergedDoc.split(/^===FILE:\s*(.+?)===$/m);
             
@@ -97,6 +100,7 @@ export class MergeReviewModal extends Modal {
                         if (target.path !== newPath && !this.app.vault.getAbstractFileByPath(newPath)) {
                             await this.app.fileManager.renameFile(target, newPath);
                         }
+                        filesCreated.push(baseName);
                     } else {
                         // Subsequent blocks generate new files
                         let path = folderPath ? `${folderPath}/${baseName}.md` : `${baseName}.md`;
@@ -106,14 +110,13 @@ export class MergeReviewModal extends Modal {
                             suffix++;
                         }
                         await this.app.vault.create(path, content);
+                        filesCreated.push(path.split('/').pop()?.replace('.md', '') || baseName);
                     }
                 }
-                new Notice("Multiple atomic files successfully created.");
             } else {
                 // Fallback: standard 1-file merge
                 await this.app.vault.modify(target, this.mergedDoc);
-                if (this.plugin.settings.enableAutoRename) new RenameModal(this.app, target, this.suggestedName).open();
-                else new Notice("Merge approved and saved.");
+                filesCreated.push(target.basename);
             }
 
             const ds = this.plugin.settings.trainingDataPath;
@@ -121,9 +124,26 @@ export class MergeReviewModal extends Modal {
             if (this.judgeFeedback.score === 1.0 || this.humanEdited) await appendToTrainingDataset(this.app, this.buildRecord(), ds, sp);
             
             if (this.plugin.settings.deleteSourceAfterMerge) {
-                for (let i = 0; i < this.sourceAFiles.length - 1; i++) await this.app.vault.delete(this.sourceAFiles[i]);
+                for (let i = 0; i < this.sourceAFiles.length - 1; i++) {
+                    filesDeleted.push(this.sourceAFiles[i].basename);
+                    await this.app.vault.delete(this.sourceAFiles[i]);
+                }
             }
             this.close();
+
+            let summaryMsg = `Merge Complete!\n\nCreated/Updated:\n`;
+            filesCreated.forEach(f => summaryMsg += `- ${f}\n`);
+            if (filesDeleted.length > 0) {
+                summaryMsg += `\nDeleted Source Files:\n`;
+                filesDeleted.forEach(f => summaryMsg += `- ${f}\n`);
+            }
+            new Notice(summaryMsg, 10000); // 10 second display
+
+            // Only trigger rename modal if it was a single file merge and auto-rename is enabled
+            if (fileBlocks.length <= 2 && this.plugin.settings.enableAutoRename) {
+                new RenameModal(this.app, target, this.suggestedName).open();
+            }
+
         } catch (e) { console.error(e); new Notice("Failed: " + (e as Error).message); }
     }
 
