@@ -1,0 +1,20 @@
+# Obsidian Note Merger Plugin: Current State & Context
+
+## 1. Project Objective
+We are building/refining a custom Obsidian plugin called **Note Merger** optimized for dense Zettelkasten note-taking (specifically for UPSC exam prep). It aggregates multiple messy source notes, uses an AI model (currently `gemini-flash-latest`) to semantically compress and deduplicate them, and generates pristine, atomic markdown files.
+
+## 2. Core Plugin Mechanics (`src/modals/review.ts` & `src/services/merger.ts`)
+- **Atomic File Parsing:** The AI outputs text segmented by `===FILE: <Name>===` delimiters. When the user clicks "Approve", the `handleApprove()` function parses this string and physically creates multiple separated `.md` files in the vault.
+- **Link Preservation:** To ensure Obsidian wiki-links aren't broken, the script takes the **first** generated atomic note, overwrites the target file with it, and uses standard Obsidian file renaming functions to update its name. Any subsequent notes generate new `.md` files.
+- **Source Destruction:** Once the new atomic notes are created, the script deletes all original source files to eliminate clutter.
+- **UI Receipts:** A 10-second global Obsidian Notice is fired at the end summarizing exactly which new files were created and which old files were deleted.
+
+## 3. The Merger System Prompt (`src/prompts/merger.ts`)
+The prompt is heavily optimized for zero-hallucination, high-density academic extraction. Key constraints include:
+- **Hierarchical Density:** Strict Parent/Sub-fact indentation rules using single hyphens. No markdown bolding, no internal headers. Violent omission of English filler words (articles/auxiliaries).
+- **Atomic Splitting & Context Preservation:** The model must evaluate mixed inputs and group them into logical files. It is explicitly banned from duplicating facts across files and banned from fracturing contextual/logical chains.
+- **Zero Info Loss:** Strict mandate that NO proper nouns, places, religious texts, or numbers can be dropped during the conversion process.
+- **Slash (/) Conflict Resolution:** When textbooks disagree on spelling or numbers, the model is banned from using bulky `[also: x]` tags and must dense-merge them using slashes (e.g., `Satluj/Sutlej`, `1830m/3475m`).
+- **YAML Frontmatter Mastery:** 
+  - Multi-value properties (Category, Source) must be formatted as standard YAML arrays (`- item`), banning semicolons. 
+  - The `Order` property is strictly excluded from list manipulation; it exclusively inherits the single integer of the Target Note (the final source node passed in the script) to retain logical vault sorting.
