@@ -24,12 +24,12 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Validate"), 2000); return; }
         btn.setButtonText("Testing…"); btn.setDisabled(true);
         try {
-          const { GoogleGenerativeAI } = await import("@google/generative-ai");
           let valid = 0;
           for (const key of keys) {
-            try { await new GoogleGenerativeAI(key).getGenerativeModel({ model: "gemini-2.5-flash-lite" }).generateContent("S"); valid++; }
-            catch { }
-            if (keys.length > 1) await new Promise(r => setTimeout(r, 1000));
+            try {
+              const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+              if (r.ok) valid++;
+            } catch {}
           }
           btn.setButtonText(valid > 0 ? `✅ ${valid}/${keys.length} valid` : "❌ All invalid");
         } catch { btn.setButtonText("❌ Error"); }
