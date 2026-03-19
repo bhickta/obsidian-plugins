@@ -39,8 +39,31 @@ export class NoteMergerSettingTab extends PluginSettingTab {
 
     // ── Models ──
     el.createEl("h3", { text: "Models" });
-    this.textSetting(el, "Merger model", "Does the merging.", "mergerModel");
-    this.textSetting(el, "Judge model", "Audits output. Disable judge below to skip.", "judgeModel");
+
+    new Setting(el).setName("Refresh available models").setDesc("Fetch the latest list of models from Gemini API.")
+      .addButton(btn => btn.setButtonText("Refresh").onClick(async () => {
+        const keys = this.plugin.settings.geminiApiKeys.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+        if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Refresh"), 2000); return; }
+        btn.setButtonText("Fetching..."); btn.setDisabled(true);
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${keys[0]}`);
+          if (r.ok) {
+            const data = await r.json();
+            const models = data.models.filter((m: any) => m.supportedGenerationMethods?.includes("generateContent")).map((m: any) => m.name.replace("models/", ""));
+            if (models.length > 0) {
+              this.plugin.settings.cachedModels = models;
+              await this.plugin.saveSettings();
+              this.display(); // Refresh UI
+              return;
+            }
+          }
+          btn.setButtonText("❌ Failed");
+        } catch { btn.setButtonText("❌ Error"); }
+        setTimeout(() => { btn.setButtonText("Refresh"); btn.setDisabled(false); }, 2000);
+      }));
+
+    this.modelDropdown(el, "Merger model", "Does the merging.", "mergerModel");
+    this.modelDropdown(el, "Judge model", "Audits output. Disable judge below to skip.", "judgeModel");
 
     // ── Quality ──
     el.createEl("h3", { text: "Quality control" });
@@ -70,6 +93,17 @@ export class NoteMergerSettingTab extends PluginSettingTab {
   private textSetting(el: HTMLElement, name: string, desc: string, key: keyof typeof this.plugin.settings) {
     new Setting(el).setName(name).setDesc(desc)
       .addText(t => t.setValue(String(this.plugin.settings[key])).onChange(async v => { (this.plugin.settings as any)[key] = v.trim(); await this.plugin.saveSettings(); }));
+  }
+
+  private modelDropdown(el: HTMLElement, name: string, desc: string, key: "mergerModel" | "judgeModel") {
+    new Setting(el).setName(name).setDesc(desc)
+      .addDropdown(d => {
+        const val = this.plugin.settings[key];
+        const models = this.plugin.settings.cachedModels.length > 0 ? this.plugin.settings.cachedModels : [];
+        if (val && !models.includes(val)) models.unshift(val); // always include current selection
+        models.forEach(m => d.addOption(m, m));
+        d.setValue(val).onChange(async v => { this.plugin.settings[key] = v; await this.plugin.saveSettings(); });
+      });
   }
 
   private promptEditor(el: HTMLElement, name: string, key: "mergerPrompt" | "judgePrompt", def: string) {

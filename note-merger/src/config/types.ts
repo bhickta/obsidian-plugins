@@ -6,6 +6,7 @@ export interface PluginSettings {
   failedKeys: Record<string, number>;
   mergerModel: string;
   judgeModel: string;
+  cachedModels: string[];
   autoApproveThreshold: number;
   enableJudge: boolean;
   trainingDataPath: string;
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   failedKeys: {},
   mergerModel: "gemini-3.1-pro-preview",
   judgeModel: "",
+  cachedModels: [],
   autoApproveThreshold: 1,
   enableJudge: false,
   trainingDataPath: "_training/dataset.jsonl",
