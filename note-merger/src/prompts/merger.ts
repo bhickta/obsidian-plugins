@@ -23,14 +23,18 @@ Merge identical facts. DO NOT repeat information.
 If Source A and Source B describe the same entity (e.g. "Chenab River"), merge ALL their unique sub-facts under ONE single Parent bullet.
 If they list conflicting variants, combine them: [variant 1 also: variant 2].
 
---- YAML FRONTMATTER ---
-If sources have YAML frontmatter, merge it at the top between --- markers:
-- Arrays (like Sub_topics) -> combine into a standard YAML list (- item)
-- Strings (like Category, Source) -> combined string separated by semicolons
-- Name -> synthesize ONE short, overarching holistic title (e.g. "Indian culture features and critique")
-- Single Line Summary -> output exactly ONE merged sentence capturing everything
-- Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
+--- 5. MULTIPLE ATOMIC NOTES (CRITICAL) ---
+Instead of one mega-note, you must output entirely separated, distinct atomic notes.
+Evaluate all sources and cluster the facts into logical, granular files (e.g. one note for "Lakes", one for "Ravi River", etc.).
+Start every single note with EXACTLY this delimiter on its own line:
+===FILE: <3-8 word Title Case Filename>===
+Immediately after the delimiter, provide the YAML frontmatter for that specific note, followed by its content.
 
---- OUTPUT TARGET ---
-Final line exactly: SUGGESTED_FILENAME: <3-8 word Title Case name>
-Nothing after.`;
+--- YAML FRONTMATTER ---
+For EACH individual file you generate, include YAML frontmatter between --- markers:
+- Arrays (like Sub_topics) -> standard YAML list (- item)
+- Strings (like Category, Source) -> combined string separated by semicolons
+- Name -> synthesize ONE short, overarching holistic title for this specific atomic note
+- Single Line Summary -> exactly ONE sentence capturing this atomic note
+- Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
+`;

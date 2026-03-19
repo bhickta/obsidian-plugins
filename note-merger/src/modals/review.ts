@@ -5,9 +5,9 @@ import type NoteMergerPlugin from "../main";
 import { RenameModal } from "./rename";
 
 export class MergeReviewModal extends Modal {
-    plugin: NoteMergerPlugin;  sourceAFiles: TFile[];
-    sourceADoc: string;  sourceBDoc: string;  mergedDoc: string;
-    suggestedName: string;  judgeFeedback: JudgeFeedback;
+    plugin!: NoteMergerPlugin;  sourceAFiles!: TFile[];
+    sourceADoc!: string;  sourceBDoc!: string;  mergedDoc!: string;
+    suggestedName!: string;  judgeFeedback!: JudgeFeedback;
     humanEdited = false;  recordId: string;
 
     constructor(app: App, plugin: NoteMergerPlugin, files: TFile[],
@@ -79,16 +79,51 @@ export class MergeReviewModal extends Modal {
     async handleApprove() {
         try {
             const target = this.sourceAFiles[this.sourceAFiles.length - 1];
-            await this.app.vault.modify(target, this.mergedDoc);
+            const folderPath = target.parent?.path || "";
+            
+            // Parse for multiple files from the atomic prompt
+            const fileBlocks = this.mergedDoc.split(/^===FILE:\s*(.+?)===$/m);
+            
+            if (fileBlocks.length > 2) {
+                // LLM separated into multiple atomic files!
+                for (let i = 1; i < fileBlocks.length; i += 2) {
+                    const baseName = fileBlocks[i].trim().replace(/[\\/:*?"<>|]/g, "");
+                    const content = fileBlocks[i+1].trim();
+                    
+                    if (i === 1) {
+                        // First block overwrites the target file to preserve incoming links
+                        await this.app.vault.modify(target, content);
+                        const newPath = folderPath ? `${folderPath}/${baseName}.md` : `${baseName}.md`;
+                        if (target.path !== newPath && !this.app.vault.getAbstractFileByPath(newPath)) {
+                            await this.app.fileManager.renameFile(target, newPath);
+                        }
+                    } else {
+                        // Subsequent blocks generate new files
+                        let path = folderPath ? `${folderPath}/${baseName}.md` : `${baseName}.md`;
+                        let suffix = 1;
+                        while (this.app.vault.getAbstractFileByPath(path)) {
+                            path = folderPath ? `${folderPath}/${baseName} ${suffix}.md` : `${baseName} ${suffix}.md`;
+                            suffix++;
+                        }
+                        await this.app.vault.create(path, content);
+                    }
+                }
+                new Notice("Multiple atomic files successfully created.");
+            } else {
+                // Fallback: standard 1-file merge
+                await this.app.vault.modify(target, this.mergedDoc);
+                if (this.plugin.settings.enableAutoRename) new RenameModal(this.app, target, this.suggestedName).open();
+                else new Notice("Merge approved and saved.");
+            }
+
             const ds = this.plugin.settings.trainingDataPath;
             const sp = ds.substring(0, ds.lastIndexOf("/")) + "/stats.json";
             if (this.judgeFeedback.score === 1.0 || this.humanEdited) await appendToTrainingDataset(this.app, this.buildRecord(), ds, sp);
+            
             if (this.plugin.settings.deleteSourceAfterMerge) {
                 for (let i = 0; i < this.sourceAFiles.length - 1; i++) await this.app.vault.delete(this.sourceAFiles[i]);
             }
             this.close();
-            if (this.plugin.settings.enableAutoRename) new RenameModal(this.app, target, this.suggestedName).open();
-            else new Notice("Merge approved and saved.");
         } catch (e) { console.error(e); new Notice("Failed: " + (e as Error).message); }
     }
 
