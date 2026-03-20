@@ -5,7 +5,7 @@ export interface PluginSettings {
   geminiApiKeys: string;
   apiKeys: string; // Deprecated, use providerApiKeys
   providerApiKeys: Record<string, string>; // Maps provider name to newline-separated keys
-  provider: "gemini" | "zhipu" | "openai" | "groq" | "together" | "deepseek" | "openrouter" | "custom";
+  provider: "gemini" | "zhipu" | "openai" | "groq" | "together" | "deepseek" | "openrouter" | "custom" | "minimax" | "kimi" | "qwen" | "mimo" | "webai";
   customBaseUrl: string;
   failedKeys: Record<string, number>;
   mergerModel: string;

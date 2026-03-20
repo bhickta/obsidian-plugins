@@ -23,6 +23,11 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         .addOption("together", "Together AI")
         .addOption("deepseek", "DeepSeek")
         .addOption("openrouter", "OpenRouter")
+        .addOption("minimax", "MiniMax")
+        .addOption("kimi", "Kimi")
+        .addOption("qwen", "Qwen")
+        .addOption("mimo", "Xiaomi MiMo")
+        .addOption("webai", "WebAI-to-API")
         .addOption("custom", "Custom (OpenAI-Compatible)")
         .setValue(this.plugin.settings.provider)
         .onChange(async v => {
@@ -32,12 +37,20 @@ export class NoteMergerSettingTab extends PluginSettingTab {
            this.display();
         }));
 
-    if (this.plugin.settings.provider === "custom") {
-        new Setting(el).setName("Custom Base URL").setDesc("Your OpenAI-compatible endpoint URL.")
+    if (this.plugin.settings.provider === "custom" || this.plugin.settings.provider === "webai") {
+        const defaultUrl = this.plugin.settings.provider === "webai" ? "http://127.0.0.1:6969/v1" : "https://api.openai.com/v1";
+        if (!this.plugin.settings.customBaseUrl
+            || (this.plugin.settings.provider === "webai" && (this.plugin.settings.customBaseUrl === "https://api.openai.com/v1" || this.plugin.settings.customBaseUrl === "http://127.0.0.1:6969" || this.plugin.settings.customBaseUrl === "http://127.0.0.1:2334"))) {
+            this.plugin.settings.customBaseUrl = defaultUrl;
+            this.plugin.saveSettings();
+        }
+        new Setting(el).setName(this.plugin.settings.provider === "webai" ? "WebAI-to-API URL" : "Custom Base URL")
+          .setDesc(this.plugin.settings.provider === "webai" ? "URL of your WebAI-to-API server." : "Your OpenAI-compatible endpoint URL.")
           .addText(t => t.setValue(this.plugin.settings.customBaseUrl).onChange(async v => { this.plugin.settings.customBaseUrl = v; await this.plugin.saveSettings(); }));
     }
 
     const currentProvider = this.plugin.settings.provider;
+    if (currentProvider !== "webai") {
     new Setting(el)
       .setName(`${currentProvider.toUpperCase()} API Keys`)
       .setDesc("One key per line. Rate-limited keys auto-suspend for 24 h.")
@@ -75,6 +88,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         const ta = el.querySelector("textarea");
         if (ta) { ta.style.width = "100%"; ta.rows = 4; ta.style.fontFamily = "var(--font-monospace)"; ta.style.fontSize = "12px"; }
     }, 0);
+    } // end if not webai
 
     // ── Models ──
     el.createEl("h3", { text: "Models" });
@@ -84,7 +98,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         let raw = this.plugin.settings.providerApiKeys[currentProvider];
         if (!raw && currentProvider === "gemini") raw = this.plugin.settings.apiKeys || this.plugin.settings.geminiApiKeys;
         const keys = (raw || "").split("\n").map(k => k.trim()).filter(k => k.length > 0);
-        if (!keys.length) { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Refresh"), 2000); return; }
+        if (!keys.length && currentProvider !== "webai") { btn.setButtonText("❌ No keys"); setTimeout(() => btn.setButtonText("Refresh"), 2000); return; }
         btn.setButtonText("Fetching..."); btn.setDisabled(true);
         try {
           let models: string[] = [];
@@ -94,6 +108,9 @@ export class NoteMergerSettingTab extends PluginSettingTab {
               const data = await r.json();
               models = data.models.filter((m: any) => m.supportedGenerationMethods?.includes("generateContent")).map((m: any) => m.name.replace("models/", ""));
             }
+           } else if (this.plugin.settings.provider === "webai") {
+            // WebAI-to-API doesn't have a /v1/models endpoint, hardcode known models
+            models = ["gemini-3.0-pro", "gemini-2.5-pro", "gemini-2.5-flash"];
           } else {
             // OpenAI Compatible GET /models
             let baseUrl = this.plugin.settings.customBaseUrl;
@@ -103,9 +120,15 @@ export class NoteMergerSettingTab extends PluginSettingTab {
             else if (this.plugin.settings.provider === "together") baseUrl = "https://api.together.xyz/v1";
             else if (this.plugin.settings.provider === "deepseek") baseUrl = "https://api.deepseek.com";
             else if (this.plugin.settings.provider === "openrouter") baseUrl = "https://openrouter.ai/api/v1";
+            else if (this.plugin.settings.provider === "minimax") baseUrl = "https://api.minimaxi.com/v1";
+            else if (this.plugin.settings.provider === "kimi") baseUrl = "https://api.moonshot.cn/v1";
+            else if (this.plugin.settings.provider === "qwen") baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+            else if (this.plugin.settings.provider === "mimo") baseUrl = "https://api.xiaomimimo.com/v1";
             
             const url = baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models";
-            const r = await fetch(url, { headers: { "Authorization": `Bearer ${keys[0]}` } });
+            const headers: Record<string, string> = {};
+            if (keys.length > 0) headers["Authorization"] = `Bearer ${keys[0]}`;
+            const r = await fetch(url, { headers });
             if (r.ok) {
                 const data = await r.json();
                 if (data.data) models = data.data.map((m: any) => m.id);

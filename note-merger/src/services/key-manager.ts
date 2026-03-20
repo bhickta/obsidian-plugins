@@ -17,6 +17,7 @@ export class KeyManager {
         const keys = (rawKeys || "").split("\n").map(k => k.trim()).filter(k => k.length > 0);
 
         if (keys.length === 0) {
+            if (this.settings.provider === "webai") return "webai-no-key";
             throw new Error("No API keys configured. Add keys in Note Merger settings.");
         }
 
