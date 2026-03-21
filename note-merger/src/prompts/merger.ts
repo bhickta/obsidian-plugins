@@ -25,27 +25,45 @@ RULE 2 — EXTREME CONCISENESS
 RULE 3 — FORMAT (MANDATORY — DO NOT DEVIATE)
 ════════════════════════════════════════
 - Top-level bullets: hyphen (-)
-- Indentation: single tab (\\t) per level — use sparingly; most facts should be one-liners
-- Bold the **primary term** of each bullet.
-- ATOMIC UNITS: every concept = one line. No multi-line sub-bullets for a single concept.
-- Forbidden: headings (#), horizontal rules (---), blank lines, trailing colons on parent bullets.
+- Bold the **primary term** of every bullet, including sub-bullets.
+- Forbidden: headings (#), horizontal rules (---), blank lines.
 
-  Correct example:
-  - **Allelopathy**: roots release **phytotoxins**; inhibit growth/seed germination of competitors.
+GROUPING (use when an entity has 2+ distinct facets):
+- When a named entity (person, place, law, myth) has 2+ distinct facets, create a parent bullet with the entity name only, then nest facets as indented sub-bullets (one tab).
+- Parent bullet = entity name only — no facts on the same line as the parent.
+- Each sub-bullet = one facet, one line, telegraphic.
+- Maximum one level of nesting — never nest sub-bullets inside sub-bullets.
 
-  Wrong example:
-  - **Allelopathy**:
-    \\t- Mechanism: roots release phytotoxins
-    \\t- Effect: inhibits growth
+  Correct grouped example:
+  - **Danava Jalandhara (Mythology)**
+    \\t- **Identity**: son of Sagara and Ganga; wife Vrinda.
+    \\t- **Birth**: earth trembled; seized Brahma's beard; unconquered by gods.
+    \\t- **Death — Shiva**: body spans 48 kos; head at Jwalamukhi; feet at Multan.
+    \\t- **Death — Vishnu**: body confined to Kangra valley.
+
+FLAT BULLETS (use for entities with exactly 1 fact only):
+- If an entity has only 1 fact, keep as a flat one-liner. Do not create a parent just to have one sub-bullet.
+
+  Correct flat example:
+  - **HP Name**: proposed by Acharya Diwakar Dutt Sharma; Hima (snow) + Achala (mountain) = Land of Snowy Mountains.
+
+  Wrong — unnecessary parent for a single fact:
+  - **HP Name**
+    \\t- Proposed by Acharya Diwakar Dutt Sharma; Hima + Achala.
 
 ════════════════════════════════════════
 RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
 ════════════════════════════════════════
 - Merge all facts about the same entity (river, peak, district, person) into ONE parent bullet.
 - Never repeat a fact across sections.
-- Conflicting figures or spelling variants from different sources → combine with forward slash (/):
+- Genuinely conflicting figures or names from different sources (i.e. two sources disagree on the same fact) → combine with forward slash (/):
     3475m/3675m   |   Slappar/Slapper   |   Kehlur/Kahlur
   Never use brackets, parentheses, or the word "or" for conflicts.
+- Transliteration variants of the same word (Hindi/Sanskrit romanised differently) → pick the most common English spelling and use that alone. Do NOT slash-combine:
+    Satluj = Sutlej → use Sutlej
+    Kharosthi = Kharoshthi → use Kharosthi
+    Trigarta = Trigarta (no variant needed)
+  Slash is reserved for factual uncertainty, not spelling inconsistency.
 - After writing all sections, re-read every bullet. If the same fact appears in two sections, delete it from the less specific one and keep it only in the section where it is most central.
 
 ════════════════════════════════════════
