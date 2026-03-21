@@ -1,8 +1,8 @@
 import { Plugin, TFile, Notice, MarkdownView, MarkdownFileInfo, Editor } from "obsidian";
-import { DEFAULT_SETTINGS, PluginSettings } from "./config";
+import { DEFAULT_SETTINGS, PluginSettings, TrainingRecord, JudgeFeedback } from "./config";
 import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "./prompts";
-import { mergeWithRetry, KeyManager } from "./services";
-import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal, MergeReviewModal } from "./modals";
+import { mergeWithRetry, KeyManager, appendToTrainingDataset } from "./services";
+import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal } from "./modals";
 import { NoteMergerSettingTab, MergeQueueView, MERGE_QUEUE_VIEW_TYPE } from "./ui";
 
 export default class NoteMergerPlugin extends Plugin {
@@ -108,7 +108,50 @@ export default class NoteMergerPlugin extends Plugin {
             );
             this.setStatus("");
             if (result.attempts > 1) new Notice(`Done after ${result.attempts} attempts.`);
-            new MergeReviewModal(this.app, this, [...sources, target], combined, targetContent, result.mergedOutput, result.suggestedName, result.judgeFeedback).open();
+
+            const mergedText = result.mergedOutput.trim() + "\n";
+            let newTargetContent = targetContent;
+            if (targetContent.includes("===FILE:")) {
+                newTargetContent = targetContent + "\n\n" + mergedText;
+                newTargetContent = newTargetContent.replace(/^\s+/, "");
+            } else {
+                newTargetContent = mergedText;
+            }
+
+            // Save to active note
+            await this.app.vault.modify(target, newTargetContent);
+            new Notice(`Successfully merged and saved into ${target.basename}`);
+
+            // Generate Training Record
+            const conflicts: string[] = [];
+            if (result.judgeFeedback.pronoun_issues.length) conflicts.push("pronoun_resolution");
+            if (result.judgeFeedback.missing_facts.length) conflicts.push("unique_fact_preservation");
+
+            const record: TrainingRecord = {
+                messages: [
+                    { role: "system", content: this.settings.mergerPrompt },
+                    { role: "user", content: combined },
+                    { role: "assistant", content: result.mergedOutput }
+                ],
+                metadata: {
+                    id: `merge_${new Date().toISOString().replace(/[:.]/g, "-")}`,
+                    source_files: [...sources, target].map(f => f.name),
+                    judge_score: result.judgeFeedback.score,
+                    judge_feedback: result.judgeFeedback,
+                    human_edited: false,
+                    conflict_types: conflicts.length ? conflicts : ["clean_merge"],
+                    timestamp: new Date().toISOString(),
+                    model_merger: this.settings.mergerModel,
+                    model_judge: this.settings.judgeModel,
+                    attempts: result.attempts
+                }
+            };
+
+            await appendToTrainingDataset(
+                this.app, record,
+                this.settings.trainingDataPath,
+                this.settings.trainingDataPath.replace(".jsonl", "_stats.json")
+            );
         } catch (e) {
             this.setStatus("");
             const msg = (e as Error).message || String(e);
