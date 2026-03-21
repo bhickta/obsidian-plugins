@@ -49,7 +49,22 @@ RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
 ════════════════════════════════════════
 RULE 5 — FILE SPLITTING (CRITICAL)
 ════════════════════════════════════════
-Cluster facts into logical, granular sections. Use a separate section for each major entity or theme (e.g., one for "Ravi River", one for "Dal Lake", one for "Bilaspur District").
+Cluster facts into logical sections by SHARED CONTEXT — same district, same river system, same administrative unit, same theme → ONE file.
+
+The goal is CONSOLIDATION, not fragmentation. Do NOT create a separate file for every individual entity. Ask: "Do these facts belong to the same topic a student would revise together?" If yes, keep them in one file.
+
+  RIGHT — all lakes of Shimla District share district + theme → one file:
+    ===FILE: Lakes of Shimla District===
+    - **Chandranahan Lake**: ...
+    - **Karali Lake**: ...
+    - **Tani-Jubbar Lake**: ...
+
+  WRONG — splitting each lake into its own file:
+    ===FILE: Chandranahan Lake Rohru Tehsil===
+    ===FILE: Karali Lake Shimla District===
+    ===FILE: Tani Jubbar Lake Narkanda===
+
+Split into a NEW file only when entities belong to a clearly different district, river basin, or thematic category — not merely because they are distinct named objects within the same category.
 
 Every section MUST begin with exactly this delimiter on its own line:
 
@@ -65,4 +80,5 @@ SELF-CHECK (run mentally before finalising output)
 3. Does any fact appear more than once across sections? → MERGE it.
 4. Does any bullet span multiple lines for a single concept? → COLLAPSE it.
 5. Are all FILE delimiters correctly formatted with no blank line before the first bullet?
+6. Are entities that share district/theme/basin grouped into ONE file, not split across many?
 `;
