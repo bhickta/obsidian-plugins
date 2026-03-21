@@ -34,12 +34,19 @@ GROUPING (use when an entity has 2+ distinct facets):
 - Each sub-bullet = one facet, one line, telegraphic.
 - Maximum one level of nesting — never nest sub-bullets inside sub-bullets.
 
-  Correct grouped example:
-  - **Danava Jalandhara (Mythology)**
-    \\t- **Identity**: son of Sagara and Ganga; wife Vrinda.
-    \\t- **Birth**: earth trembled; seized Brahma's beard; unconquered by gods.
-    \\t- **Death — Shiva**: body spans 48 kos; head at Jwalamukhi; feet at Multan.
-    \\t- **Death — Vishnu**: body confined to Kangra valley.
+SUB-FEATURE RULE:
+- If a named term is a component or sub-feature of a parent entity already present, do NOT promote it to a new top-level parent. Nest it as a sub-bullet under the entity it belongs to.
+
+  Correct — Doons and Choes nested under Shivalik:
+  - **Shivalik Range**
+    \\t- **Doons**: wide, long, fertile valleys; Kiyar-da-doon (Sirmaur), Nalagarh doon (Solan), Jaswan doon (Una).
+    \\t- **Choes**: monsoonal streams; cause high erosion of unconsolidated deposits.
+
+  Wrong — sub-features promoted to independent top-level parents:
+  - **Doons**
+    \\t- **Definition**: wide, long, fertile valleys.
+  - **Choes**
+    \\t- **Identity**: monsoonal streams.
 
 FLAT BULLETS (use for entities with exactly 1 fact only):
 - If an entity has only 1 fact, keep as a flat one-liner. Do not create a parent just to have one sub-bullet.
@@ -50,6 +57,13 @@ FLAT BULLETS (use for entities with exactly 1 fact only):
   Wrong — unnecessary parent for a single fact:
   - **HP Name**
     \\t- Proposed by Acharya Diwakar Dutt Sharma; Hima + Achala.
+
+  Correct grouped example:
+  - **Danava Jalandhara (Mythology)**
+    \\t- **Identity**: son of Sagara and Ganga; wife Vrinda.
+    \\t- **Birth**: earth trembled; seized Brahma's beard; unconquered by gods.
+    \\t- **Death — Shiva**: body spans 48 kos; head at Jwalamukhi; feet at Multan.
+    \\t- **Death — Vishnu**: body confined to Kangra valley.
 
 ════════════════════════════════════════
 RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
@@ -62,7 +76,6 @@ RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
 - Transliteration variants of the same word (Hindi/Sanskrit romanised differently) → pick the most common English spelling and use that alone. Do NOT slash-combine:
     Satluj = Sutlej → use Sutlej
     Kharosthi = Kharoshthi → use Kharosthi
-    Trigarta = Trigarta (no variant needed)
   Slash is reserved for factual uncertainty, not spelling inconsistency.
 - After writing all sections, re-read every bullet. If the same fact appears in two sections, delete it from the less specific one and keep it only in the section where it is most central.
 
@@ -112,4 +125,5 @@ SELF-CHECK (run mentally before finalising output)
 6. Does any FILE section have fewer than 4 bullets? → ABSORB it, no exceptions.
 7. Is the total FILE count greater than the number of source files received? → MERGE until it is not.
 8. Did I add any date, figure, or name not explicitly present in the sources? → DELETE it.
+9. Are any sub-features (valleys, streams, components) promoted as top-level parents instead of nested under their parent entity? → MOVE them down.
 `;
