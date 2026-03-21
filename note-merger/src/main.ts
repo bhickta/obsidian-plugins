@@ -91,12 +91,24 @@ export default class NoteMergerPlugin extends Plugin {
         this.setStatus("⏳ Merging...");
         new Notice(`Starting merge of ${sources.length} file(s) into ${target.basename}...`);
         try {
-            const contents = await Promise.all(sources.map(f => this.app.vault.read(f)));
-            const targetContent = await this.app.vault.read(target);
+            const rawTargetContent = await this.app.vault.read(target);
+            
+            // Extract YAML from target note before stripping
+            let extractedYaml = "";
+            const yamlMatch = rawTargetContent.match(/^---\n([\s\S]*?)\n---/);
+            if (yamlMatch) {
+                extractedYaml = `---\n${yamlMatch[1]}\n---\n`;
+            }
+
+            const stripYaml = (text: string) => text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+
+            const contents = await Promise.all(sources.map(async f => stripYaml(await this.app.vault.read(f))));
+            const targetBody = stripYaml(rawTargetContent);
             const combined = contents.join("\n\n---\n\n");
+            
             const km = new KeyManager(this.settings, async () => await this.saveSettings());
             const result = await mergeWithRetry(km, this.settings.mergerModel,
-                this.settings.mergerPrompt, [combined, targetContent],
+                this.settings.mergerPrompt, [combined, targetBody],
                 (attempt: number, max: number, issues: string[]) => {
                     this.setStatus(`⏳ Attempt ${attempt}/${max}...`);
                     new Notice(attempt === 1 ? `Merging... (${attempt}/${max})` : `Retrying (${attempt}/${max}) — ${issues.length} issues`);
@@ -107,13 +119,6 @@ export default class NoteMergerPlugin extends Plugin {
             );
             this.setStatus("");
             if (result.attempts > 1) new Notice(`Done after ${result.attempts} attempts.`);
-
-            // Extract YAML from target note
-            let extractedYaml = "";
-            const yamlMatch = targetContent.match(/^---\n([\s\S]*?)\n---/);
-            if (yamlMatch) {
-                extractedYaml = `---\n${yamlMatch[1]}\n---\n`;
-            }
 
             // Split mergedOutput into multiple files
             const rawOutput = result.mergedOutput.trim();
@@ -162,7 +167,7 @@ export default class NoteMergerPlugin extends Plugin {
             const record: TrainingRecord = {
                 messages: [
                     { role: "system", content: this.settings.mergerPrompt },
-                    { role: "user", content: combined },
+                    { role: "user", content: [combined, targetBody].filter(Boolean).join("\n\n=======================\n\n") },
                     { role: "assistant", content: result.mergedOutput }
                 ],
                 metadata: {
