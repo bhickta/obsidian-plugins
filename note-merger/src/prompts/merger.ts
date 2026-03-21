@@ -35,35 +35,44 @@ GROUPING (use when an entity has 2+ distinct facets):
 - Maximum one level of nesting — never nest sub-bullets inside sub-bullets.
 
 SUB-FEATURE RULE:
-- If a named term is a component or sub-feature of a parent entity already present, do NOT promote it to a new top-level parent. Nest it as a sub-bullet under the entity it belongs to.
+- If a named term is a component, sub-feature, or sub-type of a parent entity already present, do NOT promote it to a new top-level parent or peer sub-bullet. Nest it as a sub-bullet under the entity it belongs to.
+- This applies universally across all UPSC topics: geography, history, polity, economy, science, environment, etc.
+  - Geographic sub-features: Doons and Choes are types of Shivalik feature → nest under Shivalik.
+  - Taxonomic sub-types: Katabatic and Anabatic are types of Gravity Wind → nest under Gravity Winds.
+  - Legal sub-provisions: Sections of an Act are sub-features of that Act → nest under the Act.
+  - Historical sub-events: Phases of a movement are sub-features of that movement → nest under the movement.
+  - Biological sub-types: Orders/families are sub-types of a class → nest under the class.
 
-  Correct — Doons and Choes nested under Shivalik:
-  - **Shivalik Range**
-    \\t- **Doons**: wide, long, fertile valleys; Kiyar-da-doon (Sirmaur), Nalagarh doon (Solan), Jaswan doon (Una).
-    \\t- **Choes**: monsoonal streams; cause high erosion of unconsolidated deposits.
+  Correct — sub-types nested under parent:
+  - **Photosynthesis**
+    \t- **Light Reactions**: occur in thylakoid membrane; produce ATP and NADPH.
+    \t- **Dark Reactions (Calvin Cycle)**: occur in stroma; fix CO2 into glucose.
 
-  Wrong — sub-features promoted to independent top-level parents:
-  - **Doons**
-    \\t- **Definition**: wide, long, fertile valleys.
-  - **Choes**
-    \\t- **Identity**: monsoonal streams.
+  Correct — sub-provisions nested under parent act:
+  - **Article 356 (President's Rule)**
+    \t- **Grounds**: failure of constitutional machinery in state.
+    \t- **Duration**: 2 months initially; extendable to 3 years with Parliament approval.
 
+  Wrong — sub-types promoted to independent top-level parents:
+  - **Light Reactions**
+    \t- **Location**: thylakoid membrane.
+  - **Dark Reactions**
+    \t- **Location**: stroma.
 FLAT BULLETS (use for entities with exactly 1 fact only):
 - If an entity has only 1 fact, keep as a flat one-liner. Do not create a parent just to have one sub-bullet.
 
   Correct flat example:
-  - **HP Name**: proposed by Acharya Diwakar Dutt Sharma; Hima (snow) + Achala (mountain) = Land of Snowy Mountains.
+  - **Directive Principles of State Policy**: non-justiciable; Part IV of Constitution; guide state policy.
 
   Wrong — unnecessary parent for a single fact:
-  - **HP Name**
-    \\t- Proposed by Acharya Diwakar Dutt Sharma; Hima + Achala.
+  - **Directive Principles of State Policy**
+    \\t- Non-justiciable; Part IV of Constitution.
 
   Correct grouped example:
-  - **Danava Jalandhara (Mythology)**
-    \\t- **Identity**: son of Sagara and Ganga; wife Vrinda.
-    \\t- **Birth**: earth trembled; seized Brahma's beard; unconquered by gods.
-    \\t- **Death — Shiva**: body spans 48 kos; head at Jwalamukhi; feet at Multan.
-    \\t- **Death — Vishnu**: body confined to Kangra valley.
+  - **Non-Cooperation Movement (1920–22)**
+    \\t- **Trigger**: Rowlatt Act; Jallianwala Bagh massacre.
+    \\t- **Methods**: boycott of councils, courts, schools; surrender of titles.
+    \\t- **Withdrawal**: Gandhi called off after Chauri Chaura violence (Feb 1922).
 
 ════════════════════════════════════════
 RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
