@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type NoteMergerPlugin from "../main";
-import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
+import { CONTENT_MERGER_PROMPT } from "../prompts";
 
 export class NoteMergerSettingTab extends PluginSettingTab {
   plugin: NoteMergerPlugin;
@@ -147,18 +147,6 @@ export class NoteMergerSettingTab extends PluginSettingTab {
       }));
 
     this.modelDropdown(el, "Merger model", "The model that reads and merges your notes.", "mergerModel");
-    this.modelDropdown(el, "Judge model", "Audits output. Disable judge below to skip.", "judgeModel");
-
-    // ── Quality ──
-    el.createEl("h3", { text: "Quality control" });
-    new Setting(el).setName("Enable judge").setDesc("Run judge model after every merge.")
-      .addToggle(t => t.setValue(this.plugin.settings.enableJudge).onChange(async v => { this.plugin.settings.enableJudge = v; await this.plugin.saveSettings(); }));
-    new Setting(el).setName("Auto-approve threshold").setDesc("Score above which merge auto-passes.")
-      .addSlider(s => s.setLimits(0.5, 1.0, 0.01).setValue(this.plugin.settings.autoApproveThreshold).setDynamicTooltip()
-        .onChange(async v => { this.plugin.settings.autoApproveThreshold = v; await this.plugin.saveSettings(); }));
-    new Setting(el).setName("Max retries").setDesc("1 = no retries.")
-      .addSlider(s => s.setLimits(1, 5, 1).setValue(this.plugin.settings.maxRetries).setDynamicTooltip()
-        .onChange(async v => { this.plugin.settings.maxRetries = v; await this.plugin.saveSettings(); }));
 
     // ── Behaviour ──
     el.createEl("h3", { text: "Behaviour" });
@@ -171,7 +159,6 @@ export class NoteMergerSettingTab extends PluginSettingTab {
     // ── Prompts ──
     el.createEl("h3", { text: "System prompts" });
     this.promptEditor(el, "Merger prompt", "mergerPrompt", CONTENT_MERGER_PROMPT);
-    this.promptEditor(el, "Judge prompt", "judgePrompt", DEFAULT_JUDGE_PROMPT);
   }
 
   private textSetting(el: HTMLElement, name: string, desc: string, key: keyof typeof this.plugin.settings) {
@@ -179,7 +166,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
       .addText(t => t.setValue(String(this.plugin.settings[key])).onChange(async v => { (this.plugin.settings as any)[key] = v.trim(); await this.plugin.saveSettings(); }));
   }
 
-  private modelDropdown(el: HTMLElement, name: string, desc: string, key: "mergerModel" | "judgeModel") {
+  private modelDropdown(el: HTMLElement, name: string, desc: string, key: "mergerModel") {
     new Setting(el).setName(name).setDesc(desc)
       .addDropdown(d => {
         const val = this.plugin.settings[key];
@@ -190,7 +177,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
       });
   }
 
-  private promptEditor(el: HTMLElement, name: string, key: "mergerPrompt" | "judgePrompt", def: string) {
+  private promptEditor(el: HTMLElement, name: string, key: "mergerPrompt", def: string) {
     new Setting(el).setName(name).addTextArea(t => {
       t.setValue(this.plugin.settings[key]).onChange(async v => { this.plugin.settings[key] = v; await this.plugin.saveSettings(); });
       t.inputEl.rows = 14; t.inputEl.style.width = "100%"; t.inputEl.style.fontFamily = "var(--font-monospace)"; t.inputEl.style.fontSize = "11px";

@@ -1,6 +1,6 @@
 import { Plugin, TFile, Notice, MarkdownView, MarkdownFileInfo, Editor } from "obsidian";
-import { DEFAULT_SETTINGS, PluginSettings, TrainingRecord, JudgeFeedback } from "./config";
-import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "./prompts";
+import { DEFAULT_SETTINGS, PluginSettings, TrainingRecord } from "./config";
+import { CONTENT_MERGER_PROMPT } from "./prompts";
 import { mergeWithRetry, KeyManager, appendToTrainingDataset } from "./services";
 import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal } from "./modals";
 import { NoteMergerSettingTab, MergeQueueView, MERGE_QUEUE_VIEW_TYPE } from "./ui";
@@ -95,14 +95,13 @@ export default class NoteMergerPlugin extends Plugin {
             const targetContent = await this.app.vault.read(target);
             const combined = contents.join("\n\n---\n\n");
             const km = new KeyManager(this.settings, async () => await this.saveSettings());
-            const result = await mergeWithRetry(km, this.settings.mergerModel, this.settings.judgeModel,
-                this.settings.mergerPrompt, this.settings.judgePrompt, [combined, targetContent],
-                this.settings.maxRetries, this.settings.enableJudge,
-                (attempt, max, issues) => {
+            const result = await mergeWithRetry(km, this.settings.mergerModel,
+                this.settings.mergerPrompt, [combined, targetContent],
+                (attempt: number, max: number, issues: string[]) => {
                     this.setStatus(`⏳ Attempt ${attempt}/${max}...`);
                     new Notice(attempt === 1 ? `Merging... (${attempt}/${max})` : `Retrying (${attempt}/${max}) — ${issues.length} issues`);
                 },
-                (msg) => {
+                (msg: string) => {
                     this.setStatus(`⏳ ${msg}`);
                 }
             );
@@ -160,10 +159,6 @@ export default class NoteMergerPlugin extends Plugin {
             }
 
             // Generate Training Record
-            const conflicts: string[] = [];
-            if (result.judgeFeedback.pronoun_issues.length) conflicts.push("pronoun_resolution");
-            if (result.judgeFeedback.missing_facts.length) conflicts.push("unique_fact_preservation");
-
             const record: TrainingRecord = {
                 messages: [
                     { role: "system", content: this.settings.mergerPrompt },
@@ -173,13 +168,8 @@ export default class NoteMergerPlugin extends Plugin {
                 metadata: {
                     id: `merge_${new Date().toISOString().replace(/[:.]/g, "-")}`,
                     source_files: [...sources, target].map(f => f.name),
-                    judge_score: result.judgeFeedback.score,
-                    judge_feedback: result.judgeFeedback,
-                    human_edited: false,
-                    conflict_types: conflicts.length ? conflicts : ["clean_merge"],
                     timestamp: new Date().toISOString(),
                     model_merger: this.settings.mergerModel,
-                    model_judge: this.settings.judgeModel,
                     attempts: result.attempts
                 }
             };
@@ -241,11 +231,7 @@ export default class NoteMergerPlugin extends Plugin {
             needsSave = true;
         }
 
-        // Reset judge prompt if it still contains YAML-specific checks
-        if (this.settings.judgePrompt && this.settings.judgePrompt.includes("missing_yaml_fields")) {
-            this.settings.judgePrompt = DEFAULT_JUDGE_PROMPT;
-            needsSave = true;
-        }
+        // Removed Judge Prompt reset check here
 
         if (needsSave) await this.saveSettings();
     }

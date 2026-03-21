@@ -24,7 +24,7 @@ export async function logRejection(app: App, record: TrainingRecord, statsPath: 
 async function updateStats(app: App, record: TrainingRecord, path: string, rejected = false) {
     let stats: TrainingStats = {
         total_merges: 0, auto_approved: 0, human_edited: 0,
-        rejected: 0, conflict_type_counts: {}, average_judge_score: 0
+        rejected: 0
     };
     const file = app.vault.getAbstractFileByPath(path);
     if (file instanceof TFile) {
@@ -34,11 +34,7 @@ async function updateStats(app: App, record: TrainingRecord, path: string, rejec
     stats.total_merges++;
     if (rejected) { stats.rejected++; }
     else {
-        record.metadata.human_edited ? stats.human_edited++ : stats.auto_approved++;
-        const old = stats.auto_approved + stats.human_edited - 1;
-        const total = stats.auto_approved + stats.human_edited;
-        stats.average_judge_score = (stats.average_judge_score * old + record.metadata.judge_score) / total;
-        for (const ct of record.metadata.conflict_types) stats.conflict_type_counts[ct] = (stats.conflict_type_counts[ct] || 0) + 1;
+        stats.auto_approved++;
     }
 
     const json = JSON.stringify(stats, null, 2);
