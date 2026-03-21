@@ -204,6 +204,19 @@ export default class NoteMergerPlugin extends Plugin {
                 this.settings.trainingDataPath.replace(".jsonl", "_stats.json")
             );
 
+            if (this.settings.deleteSourceAfterMerge) {
+                if (filesCreated.length > 0 && !filesCreated.includes(target)) {
+                    // All new files created, safe to delete sources and the target "container" note
+                    for (const f of sources) { await this.app.vault.delete(f); }
+                    await this.app.vault.delete(target);
+                    new Notice("Sources and target note deleted.");
+                } else if (filesCreated.includes(target)) {
+                    // Fallback happened, only delete sources
+                    for (const f of sources) { await this.app.vault.delete(f); }
+                    new Notice("Source notes deleted (target preserved).");
+                }
+            }
+
             return filesCreated;
         } catch (e) {
             this.setStatus("");
