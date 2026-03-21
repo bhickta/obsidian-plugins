@@ -1,5 +1,6 @@
-export const MASTER_PROMPT = `Expert Knowledge Merger — UPSC exam prep.
+export const CONTENT_MERGER_PROMPT = `Expert Knowledge Merger — UPSC exam prep.
 Goal: Merge ALL source notes into ONE ultra-dense, entirely de-duplicated Master Note for rapid recall.
+Your output must contain PURE CONTENT ONLY. NO YAML, NO METADATA.
 
 --- 1. ZERO INFO LOSS (CRITICAL) ---
 Every fact, date, figure, qualifier, and proper noun from ALL sources must appear.
@@ -21,26 +22,15 @@ Structure:
 
 --- 4. DE-DUPLICATION & LOGICAL CHAINS ---
 Merge identical facts. DO NOT repeat information.
-You MUST NEVER duplicate a fact across multiple atomic notes. A fact belongs in exactly ONE note.
-Do not fracture logical chains (e.g., if Text A proves Concept B, keep them together in one file).
+You MUST NEVER duplicate a fact across multiple logical sections.
 If Source A and Source B describe the same entity (e.g. "Chenab River"), merge ALL their unique sub-facts under ONE single Parent bullet.
 CRITICAL CONFLICT RESOLUTION:
 If sources list conflicting numbers or spelling variants for the SAME entity, YOU MUST combine them using a forward slash (/) (e.g., 3475m/3675m; Slappar/Slapper). NEVER use brackets or words like "[also:]" or "or".
 
---- 5. MULTIPLE ATOMIC NOTES (CRITICAL) ---
-Instead of one mega-note, you must output entirely separated, distinct atomic notes.
-Evaluate all sources and cluster the facts into logical, granular files (e.g. one note for "Lakes", one for "Ravi River", etc.).
-Start every single note with EXACTLY this delimiter on its own line:
+--- 5. FILE SPLITTING DELIMITERS (CRITICAL) ---
+Instead of one mega-note, evaluate all sources and cluster the facts into logical, granular sections (e.g. one for "Lakes", one for "Ravi River", etc.).
+Start every single section with EXACTLY this delimiter on its own line:
 ===FILE: <3-8 word Title Case Filename>===
-Immediately after the delimiter, provide the YAML frontmatter for that specific note, followed by its content.
-
---- YAML FRONTMATTER ---
-For EACH individual file you generate, include YAML frontmatter between --- markers:
-- Arrays (like Sub_topics) -> standard YAML list (- item)
-- For ANY property that has multiple values across sources (like Category, Source, Subject), combine them into a standard YAML list (- item). NEVER combine metadata using semicolons.
-- Order -> DO NOT combine into lists. Strictly inherit the single integer Order value exclusively from the FINAL source note (the target file) provided in the prompt, ignoring any orders from earlier sources.
-- Name -> synthesize ONE short, overarching holistic title for this specific atomic note
-- Single Line Summary -> exactly ONE sentence capturing this atomic note
-- Recall Question -> carefully DE-DUPLICATE then output as a standard YAML list (- "Question 1")
-- Preserve all other custom properties from matching sources as standard YAML lists if there are multiple.
+Immediately after the delimiter, provide the pure bullet content for that section.
+DO NOT OUTPUT ANY YAML OR METADATA. ONLY THE DELIMITER AND THE BULLETS.
 `;

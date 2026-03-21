@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type NoteMergerPlugin from "../main";
-import { MASTER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
+import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
 
 export class NoteMergerSettingTab extends PluginSettingTab {
   plugin: NoteMergerPlugin;
@@ -146,7 +146,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
         setTimeout(() => { btn.setButtonText("Refresh"); btn.setDisabled(false); }, 2000);
       }));
 
-    this.modelDropdown(el, "Merger model", "Does the merging.", "mergerModel");
+    this.modelDropdown(el, "Merger model", "The model that reads and merges your notes.", "mergerModel");
     this.modelDropdown(el, "Judge model", "Audits output. Disable judge below to skip.", "judgeModel");
 
     // ── Quality ──
@@ -170,7 +170,7 @@ export class NoteMergerSettingTab extends PluginSettingTab {
 
     // ── Prompts ──
     el.createEl("h3", { text: "System prompts" });
-    this.promptEditor(el, "Merger prompt", "mergerPrompt", MASTER_PROMPT);
+    this.promptEditor(el, "Merger prompt", "mergerPrompt", CONTENT_MERGER_PROMPT);
     this.promptEditor(el, "Judge prompt", "judgePrompt", DEFAULT_JUDGE_PROMPT);
   }
 

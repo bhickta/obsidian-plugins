@@ -14,7 +14,8 @@ export async function mergeWithRetry(
     keyManager: KeyManager, mergerModel: string, judgeModel: string,
     mergerPrompt: string, judgePrompt: string, sources: string[],
     maxRetries: number, enableJudge: boolean,
-    onProgress?: (attempt: number, max: number, issues: string[]) => void
+    onProgress?: (attempt: number, max: number, issues: string[]) => void,
+    onIntermediateProgress?: (msg: string) => void
 ): Promise<MergeWithRetryResult> {
     let mergedOutput = "", suggestedName = "Merged Note";
     let judgeFeedback: JudgeFeedback = {
@@ -25,7 +26,7 @@ export async function mergeWithRetry(
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         if (onProgress) onProgress(attempt, maxRetries, hint ? judgeFeedback.missing_facts : []);
 
-        const r = await mergeNotes(keyManager, mergerModel, mergerPrompt, sources, hint);
+        const r = await mergeNotes(keyManager, mergerModel, mergerPrompt, sources, hint, onIntermediateProgress);
         mergedOutput = r.content;
         suggestedName = r.suggestedName;
 

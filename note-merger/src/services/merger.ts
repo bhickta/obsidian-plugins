@@ -1,5 +1,6 @@
 import { executeChatCompletion } from "./llm";
 import { KeyManager } from "./key-manager";
+import { getFrontMatterInfo } from "obsidian";
 
 export interface MergeResult {
     content: string;
@@ -29,14 +30,21 @@ async function callWithRetry(keyManager: KeyManager, modelName: string, systemPr
 }
 
 export async function mergeNotes(
-    keyManager: KeyManager, modelName: string, systemPrompt: string,
-    sources: string[], hint?: string
+    keyManager: KeyManager, mergerModel: string,
+    systemPrompt: string,
+    sources: string[], hint?: string,
+    onProgressUpdate?: (msg: string) => void
 ): Promise<MergeResult> {
     let prompt = "Please merge the following sources:\n\n";
-    sources.forEach((src, i) => { prompt += `--- SOURCE ${i + 1} ---\n${src}\n\n`; });
+    sources.forEach((src, i) => { 
+        const info = getFrontMatterInfo(src);
+        const contentOnly = info.exists ? src.substring(info.contentStart) : src;
+        prompt += `--- SOURCE ${i + 1} ---\n${contentOnly.trim()}\n\n`; 
+    });
     if (hint) prompt += `--- PREVIOUS DRAFT HINT ---\nFix issues:\n${hint}\n\n`;
 
-    const result = await callWithRetry(keyManager, modelName, systemPrompt, prompt);
+    if (onProgressUpdate) onProgressUpdate("Merging content...");
+    const result = await callWithRetry(keyManager, mergerModel, systemPrompt, prompt);
 
     let text = result.trim();
     if (text.startsWith("```markdown\n")) { text = text.substring(12); if (text.endsWith("\n```")) text = text.slice(0, -4); }

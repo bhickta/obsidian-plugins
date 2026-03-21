@@ -1,5 +1,6 @@
 import { Plugin, TFile, Notice, MarkdownView, MarkdownFileInfo, Editor } from "obsidian";
 import { DEFAULT_SETTINGS, PluginSettings } from "./config";
+import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "./prompts";
 import { mergeWithRetry, KeyManager } from "./services";
 import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal, MergeReviewModal } from "./modals";
 import { NoteMergerSettingTab, MergeQueueView, MERGE_QUEUE_VIEW_TYPE } from "./ui";
@@ -86,7 +87,7 @@ export default class NoteMergerPlugin extends Plugin {
     private setStatus(text: string) { if (this.statusBarEl) this.statusBarEl.setText(text); }
 
     async executeMerge(sources: TFile[], target: TFile) {
-        if (!this.settings.geminiApiKeys) { new Notice("Add your Gemini API key in Note Merger settings"); return; }
+        if (!this.settings.geminiApiKeys) { new Notice("Add your API key in Note Merger settings"); return; }
         this.setStatus("⏳ Merging...");
         new Notice(`Starting merge of ${sources.length} file(s) into ${target.basename}...`);
         try {
@@ -100,7 +101,11 @@ export default class NoteMergerPlugin extends Plugin {
                 (attempt, max, issues) => {
                     this.setStatus(`⏳ Attempt ${attempt}/${max}...`);
                     new Notice(attempt === 1 ? `Merging... (${attempt}/${max})` : `Retrying (${attempt}/${max}) — ${issues.length} issues`);
-                });
+                },
+                (msg) => {
+                    this.setStatus(`⏳ ${msg}`);
+                }
+            );
             this.setStatus("");
             if (result.attempts > 1) new Notice(`Done after ${result.attempts} attempts.`);
             new MergeReviewModal(this.app, this, [...sources, target], combined, targetContent, result.mergedOutput, result.suggestedName, result.judgeFeedback).open();
@@ -123,11 +128,37 @@ export default class NoteMergerPlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const saved = await this.loadData() || {};
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+
+        let needsSave = false;
+
+        // Migrate legacy single API key
         if (this.settings.geminiApiKey && !this.settings.geminiApiKeys) {
             this.settings.geminiApiKeys = this.settings.geminiApiKey;
-            await this.saveSettings();
+            needsSave = true;
         }
+
+        // Remove stale metadata settings from old two-stage pipeline
+        if ("metadataModel" in (saved as any) || "metadataPrompt" in (saved as any)) {
+            delete (this.settings as any).metadataModel;
+            delete (this.settings as any).metadataPrompt;
+            needsSave = true;
+        }
+
+        // Reset merger prompt if it still contains YAML generation instructions
+        if (this.settings.mergerPrompt && this.settings.mergerPrompt.includes("YAML FRONTMATTER")) {
+            this.settings.mergerPrompt = CONTENT_MERGER_PROMPT;
+            needsSave = true;
+        }
+
+        // Reset judge prompt if it still contains YAML-specific checks
+        if (this.settings.judgePrompt && this.settings.judgePrompt.includes("missing_yaml_fields")) {
+            this.settings.judgePrompt = DEFAULT_JUDGE_PROMPT;
+            needsSave = true;
+        }
+
+        if (needsSave) await this.saveSettings();
     }
 
     async saveSettings() { await this.saveData(this.settings); }

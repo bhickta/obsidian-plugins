@@ -1,4 +1,4 @@
-import { MASTER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
+import { CONTENT_MERGER_PROMPT, DEFAULT_JUDGE_PROMPT } from "../prompts";
 
 export interface PluginSettings {
   geminiApiKey: string;
@@ -38,6 +38,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   deleteSourceAfterMerge: false,
   maxRetries: 1,
   enableAutoRename: true,
-  mergerPrompt: MASTER_PROMPT,
+  mergerPrompt: CONTENT_MERGER_PROMPT,
   judgePrompt: DEFAULT_JUDGE_PROMPT,
 };

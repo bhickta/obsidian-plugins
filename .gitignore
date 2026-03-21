@@ -27,3 +27,5 @@ npm-debug.log*
 
 # Training data (generated at runtime)
 _training/
+generate_training_dataset
+__pycache__
