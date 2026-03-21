@@ -86,8 +86,8 @@ export default class NoteMergerPlugin extends Plugin {
 
     private setStatus(text: string) { if (this.statusBarEl) this.statusBarEl.setText(text); }
 
-    async executeMerge(sources: TFile[], target: TFile) {
-        if (!this.settings.geminiApiKeys) { new Notice("Add your API key in Note Merger settings"); return; }
+    async executeMerge(sources: TFile[], target: TFile): Promise<TFile[]> {
+        if (!this.settings.geminiApiKeys) { new Notice("Add your API key in Note Merger settings"); return []; }
         this.setStatus("⏳ Merging...");
         new Notice(`Starting merge of ${sources.length} file(s) into ${target.basename}...`);
         try {
@@ -121,7 +121,7 @@ export default class NoteMergerPlugin extends Plugin {
             // Regex to find all ===FILE: Title=== occurrences
             const fileBlocks = rawOutput.split(/^(===FILE:[ \t]*[^\n]+===)[ \t]*\n/m);
             
-            let filesCreated = 0;
+            let filesCreated: TFile[] = [];
             const folderPath = target.parent?.path;
             const basePath = folderPath ? folderPath + "/" : "";
 
@@ -145,17 +145,18 @@ export default class NoteMergerPlugin extends Plugin {
                         counter++;
                     }
 
-                    await this.app.vault.create(newFilePath, newContent);
-                    filesCreated++;
+                    const newFile = await this.app.vault.create(newFilePath, newContent);
+                    filesCreated.push(newFile);
                 }
             }
 
-            if (filesCreated > 0) {
-                new Notice(`Successfully created ${filesCreated} new note(s) from merge!`);
+            if (filesCreated.length > 0) {
+                new Notice(`Successfully created ${filesCreated.length} new note(s) from merge!`);
             } else {
                 new Notice(`No ===FILE=== delimiters found. Could not split into distinct notes.`);
                 // Fallback: Just save it to target if no files were detected.
                 await this.app.vault.modify(target, extractedYaml + rawOutput + "\n");
+                filesCreated.push(target);
             }
 
             // Generate Training Record
@@ -188,6 +189,8 @@ export default class NoteMergerPlugin extends Plugin {
                 this.settings.trainingDataPath,
                 this.settings.trainingDataPath.replace(".jsonl", "_stats.json")
             );
+
+            return filesCreated;
         } catch (e) {
             this.setStatus("");
             const msg = (e as Error).message || String(e);
@@ -203,6 +206,7 @@ export default class NoteMergerPlugin extends Plugin {
             else if (msg.toLowerCase().includes("api key not valid")) new Notice("⚠️ Invalid API key.", 8000);
             else if (msg.includes("404")) new Notice("⚠️ Model not found. Check settings.", 8000);
             else new Notice(`Merge failed: ${displayMsg}`, 10000);
+            return [];
         }
     }
 

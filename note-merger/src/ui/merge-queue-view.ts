@@ -11,6 +11,7 @@ export class MergeQueueView extends ItemView {
     private dropZone!: HTMLElement;
     private mergeBtn!: HTMLButtonElement;
     private importBtn!: HTMLButtonElement;
+    private resultsContainer!: HTMLElement;
 
     constructor(leaf: WorkspaceLeaf, plugin: NoteMergerPlugin) { super(leaf); this.plugin = plugin; }
     getViewType() { return MERGE_QUEUE_VIEW_TYPE; }
@@ -39,7 +40,10 @@ export class MergeQueueView extends ItemView {
         this.mergeBtn = footer.createEl("button", { text: "Merge All into Active Note", cls: "mod-cta note-merger-queue-merge-btn" });
         this.mergeBtn.disabled = true;
         this.mergeBtn.onclick = () => this.handleMerge();
-        footer.createEl("button", { text: "Clear", cls: "note-merger-queue-clear-btn" }).onclick = () => { this.queuedFiles = []; this.renderList(); };
+        footer.createEl("button", { text: "Clear", cls: "note-merger-queue-clear-btn" }).onclick = () => { this.queuedFiles = []; this.resultsContainer.empty(); this.renderList(); };
+        
+        this.resultsContainer = c.createDiv({ cls: "note-merger-queue-results" });
+        
         this.renderList();
     }
 
@@ -143,7 +147,23 @@ export class MergeQueueView extends ItemView {
         if (!active) { new Notice("Open a target note first"); return; }
         if (!this.queuedFiles.length) { new Notice("No files in queue"); return; }
         const files = [...this.queuedFiles]; this.queuedFiles = []; this.renderList();
-        await this.plugin.executeMerge(files, active);
+        this.resultsContainer.empty();
+        
+        const generated = await this.plugin.executeMerge(files, active);
+        
+        if (generated && generated.length > 0) {
+            this.resultsContainer.createEl("hr");
+            this.resultsContainer.createEl("h4", { text: "Generated Notes:" });
+            const list = this.resultsContainer.createEl("ul", { cls: "note-merger-feedback-list" });
+            generated.forEach(file => {
+                const li = list.createEl("li");
+                const link = li.createEl("a", { text: file.basename });
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    this.app.workspace.getLeaf(false).openFile(file);
+                };
+            });
+        }
     }
 
     async onClose() {}
@@ -157,7 +177,7 @@ class SmartConnectionsImportModal extends Modal {
     constructor(app: any, candidates: TFile[], onSubmit: (selected: TFile[]) => void) {
         super(app);
         this.candidates = candidates;
-        this.selected = new Set(candidates.map(c => c.path));
+        this.selected = new Set();
         this.onSubmit = onSubmit;
     }
 
@@ -168,12 +188,20 @@ class SmartConnectionsImportModal extends Modal {
         contentEl.createEl("h2", { text: "Import from Smart Connections" });
         contentEl.createEl("p", { text: "Select the notes you want to import to the Merge Queue:", cls: "note-merger-batch-count" });
 
+        const controls = contentEl.createDiv({ cls: "note-merger-queue-footer" });
+        controls.style.flexDirection = "row";
+        controls.style.gap = "8px";
+        controls.style.marginBottom = "12px";
+        
         const listContainer = contentEl.createDiv({ cls: "note-merger-batch-list" });
         
+        
+        const cbs: HTMLInputElement[] = [];
         this.candidates.forEach(file => {
             const item = listContainer.createDiv({ cls: "note-merger-batch-item" });
             const cb = item.createEl("input", { type: "checkbox" }) as HTMLInputElement;
-            cb.checked = true;
+            cbs.push(cb);
+            cb.checked = false;
             cb.onchange = () => {
                 if (cb.checked) this.selected.add(file.path);
                 else this.selected.delete(file.path);
@@ -186,6 +214,13 @@ class SmartConnectionsImportModal extends Modal {
                 }
             };
         });
+
+        controls.createEl("button", { text: "Select All" }).onclick = () => {
+            cbs.forEach(cb => { if (!cb.checked) cb.click(); });
+        };
+        controls.createEl("button", { text: "Select None" }).onclick = () => {
+            cbs.forEach(cb => { if (cb.checked) cb.click(); });
+        };
 
         const btnContainer = contentEl.createDiv({ cls: "note-merger-queue-footer" });
         btnContainer.style.flexDirection = "row";
