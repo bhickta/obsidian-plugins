@@ -76,7 +76,9 @@ RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
 - Transliteration variants of the same word (Hindi/Sanskrit romanised differently) → pick the most common English spelling and use that alone. Do NOT slash-combine:
     Satluj = Sutlej → use Sutlej
     Kharosthi = Kharoshthi → use Kharosthi
+    Zanskar = Zaskar → use Zanskar
   Slash is reserved for factual uncertainty, not spelling inconsistency.
+- Once a standardised spelling is chosen for any transliteration variant, use it consistently throughout the entire output — including in parent bullet titles, sub-bullets, and inline references. Never mix two spellings of the same word in the same output.
 - After writing all sections, re-read every bullet. If the same fact appears in two sections, delete it from the less specific one and keep it only in the section where it is most central.
 
 ════════════════════════════════════════
