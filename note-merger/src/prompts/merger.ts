@@ -8,17 +8,18 @@ Ensure NO PROPER NOUNS (places, texts, tribes, people) are dropped during atomic
 Preserve verbatim: native-language text (Hindi/Sanskrit), qualifiers ("only", "first"), and spelling variants (Jalandhara ≠ Jallandhara).
 No external knowledge. No summarization that deletes details.
 
---- 2. ULTRA DENSE ---
-Telegraphic style: violently omit articles (a, an, the), auxiliaries, and filler words.
-Concatenate related facts with semicolons (;). Be as dense as humanly readable.
+--- 2. EXTREME CONCISENESS & FOCUS ---
+Telegraphic style: violently omit articles (a, an, the), auxiliaries, and filler words. Strictly no grammar. Eliminate obvious explanations.
+Emphasize examples, academic terms, and jargon.
+Concatenate related facts with semicolons (;). Be as space and word efficient as humanly readable.
 
---- 3. PURE BULLET FORMATTING ---
-Use ONLY standard bullet points (-) and sub-bullets (  -).
-NO headers (#). NO bolding (**). NO colons at the end of parent bullets.
-Structure:
-- Parent Entity Name
-  - Sub-fact
-  - Sub-fact
+--- 3. MANDATORY OUTPUT FORMAT & STYLE (ULTRA-COMPACT) ---
+- Use hyphen (-) for top-level bullets and a single tab (\t) for indentation.
+- Bold the **primary term**. All related information (mechanisms, effects, examples) MUST be on the same line.
+- Atomic Units: Condense all information for a single concept into one line. NO nested sub-bullets breaking up a single concept. NO new lines for a single concept.
+- NO headings (#), NO horizontal rules (---), NO colons at the end of parent bullets, or blank lines. The output under each delimiter must be a single, continuous block of dense notes.
+- Example:
+	- **Allelopathy**: Mechanism Some roots release **phytotoxins**, inhibit growth, or stop seed germination.
 
 --- 4. DE-DUPLICATION & LOGICAL CHAINS ---
 Merge identical facts. DO NOT repeat information.

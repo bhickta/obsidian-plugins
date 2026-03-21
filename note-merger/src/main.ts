@@ -116,24 +116,47 @@ export default class NoteMergerPlugin extends Plugin {
                 extractedYaml = `---\n${yamlMatch[1]}\n---\n`;
             }
 
-            // Inject the extracted YAML after every "===FILE: XXX===" line in mergedText
-            let injectedMergedText = result.mergedOutput.trim();
-            if (extractedYaml) {
-                injectedMergedText = injectedMergedText.replace(/^(===FILE:[ \t]*[^\n]+===)[ \t]*\n/gm, `$1\n${extractedYaml}`);
-            }
-            injectedMergedText += "\n";
+            // Split mergedOutput into multiple files
+            const rawOutput = result.mergedOutput.trim();
+            // Regex to find all ===FILE: Title=== occurrences
+            const fileBlocks = rawOutput.split(/^(===FILE:[ \t]*[^\n]+===)[ \t]*\n/m);
+            
+            let filesCreated = 0;
+            const folderPath = target.parent?.path;
+            const basePath = folderPath ? folderPath + "/" : "";
 
-            let newTargetContent = targetContent;
-            if (targetContent.includes("===FILE:")) {
-                newTargetContent = targetContent + "\n\n" + injectedMergedText;
-                newTargetContent = newTargetContent.replace(/^\s+/, "");
+            // The split creates an array like: [ "intro text...", "===FILE: A===", "content A", "===FILE: B===", "content B" ]
+            for (let i = 1; i < fileBlocks.length; i += 2) {
+                const header = fileBlocks[i];
+                const content = fileBlocks[i+1] || "";
+                
+                const titleMatch = header.match(/^===FILE:[ \t]*([^\n=]+)===/);
+                if (titleMatch && titleMatch[1]) {
+                    // Sanitize filename
+                    let fileName = titleMatch[1].trim().replace(/[\\/:*?"<>|]/g, "") + ".md";
+                    let newContent = extractedYaml + content.trim() + "\n";
+                    
+                    let newFilePath = basePath + fileName;
+                    
+                    // Handle duplicates by adding a number
+                    let counter = 1;
+                    while (this.app.vault.getAbstractFileByPath(newFilePath)) {
+                        newFilePath = basePath + titleMatch[1].trim().replace(/[\\/:*?"<>|]/g, "") + ` (${counter}).md`;
+                        counter++;
+                    }
+
+                    await this.app.vault.create(newFilePath, newContent);
+                    filesCreated++;
+                }
+            }
+
+            if (filesCreated > 0) {
+                new Notice(`Successfully created ${filesCreated} new note(s) from merge!`);
             } else {
-                newTargetContent = extractedYaml + injectedMergedText;
+                new Notice(`No ===FILE=== delimiters found. Could not split into distinct notes.`);
+                // Fallback: Just save it to target if no files were detected.
+                await this.app.vault.modify(target, extractedYaml + rawOutput + "\n");
             }
-
-            // Save to active note
-            await this.app.vault.modify(target, newTargetContent);
-            new Notice(`Successfully merged and saved into ${target.basename}`);
 
             // Generate Training Record
             const conflicts: string[] = [];
@@ -204,6 +227,12 @@ export default class NoteMergerPlugin extends Plugin {
 
         // Reset merger prompt if it still contains YAML generation instructions
         if (this.settings.mergerPrompt && this.settings.mergerPrompt.includes("YAML FRONTMATTER")) {
+            this.settings.mergerPrompt = CONTENT_MERGER_PROMPT;
+            needsSave = true;
+        }
+
+        // Reset merger prompt if it uses the old multi-line bullet styling
+        if (this.settings.mergerPrompt && this.settings.mergerPrompt.includes("Use ONLY standard bullet points (-) and sub-bullets")) {
             this.settings.mergerPrompt = CONTENT_MERGER_PROMPT;
             needsSave = true;
         }
