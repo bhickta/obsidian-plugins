@@ -70,6 +70,25 @@ export default class NoteMergerPlugin extends Plugin {
 
         this.addCommand({ id: "open-merge-queue", name: "Open merge queue panel", callback: () => this.activateMergeQueue() });
         this.addSettingTab(new NoteMergerSettingTab(this.app, this));
+
+        // -- Utilities --
+        const toggleStatus = async () => {
+            const active = this.app.workspace.getActiveFile();
+            if (!active || active.extension !== "md") { new Notice("No active markdown note."); return; }
+            await this.app.fileManager.processFrontMatter(active, (fm) => {
+                if (fm.Status && String(fm.Status).toLowerCase() === "read") fm.Status = "Unread";
+                else fm.Status = "Read";
+            });
+            new Notice(`Status: Read/Unread toggled for ${active.basename}`);
+        };
+
+        this.addCommand({
+            id: 'toggle-note-status',
+            name: 'Toggle Status: Read/Unread',
+            callback: toggleStatus
+        });
+
+        this.addRibbonIcon('check-circle', 'Toggle Read/Unread Status', toggleStatus);
     }
 
     async activateMergeQueue() {
