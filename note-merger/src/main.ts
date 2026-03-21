@@ -109,13 +109,26 @@ export default class NoteMergerPlugin extends Plugin {
             this.setStatus("");
             if (result.attempts > 1) new Notice(`Done after ${result.attempts} attempts.`);
 
-            const mergedText = result.mergedOutput.trim() + "\n";
+            // Extract YAML from target note
+            let extractedYaml = "";
+            const yamlMatch = targetContent.match(/^---\n([\s\S]*?)\n---/);
+            if (yamlMatch) {
+                extractedYaml = `---\n${yamlMatch[1]}\n---\n`;
+            }
+
+            // Inject the extracted YAML after every "===FILE: XXX===" line in mergedText
+            let injectedMergedText = result.mergedOutput.trim();
+            if (extractedYaml) {
+                injectedMergedText = injectedMergedText.replace(/^(===FILE:[ \t]*[^\n]+===)[ \t]*\n/gm, `$1\n${extractedYaml}`);
+            }
+            injectedMergedText += "\n";
+
             let newTargetContent = targetContent;
             if (targetContent.includes("===FILE:")) {
-                newTargetContent = targetContent + "\n\n" + mergedText;
+                newTargetContent = targetContent + "\n\n" + injectedMergedText;
                 newTargetContent = newTargetContent.replace(/^\s+/, "");
             } else {
-                newTargetContent = mergedText;
+                newTargetContent = extractedYaml + injectedMergedText;
             }
 
             // Save to active note

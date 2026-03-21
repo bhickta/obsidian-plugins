@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, Notice, Modal, Setting } from "obsidian";
 import type NoteMergerPlugin from "../main";
 
 export const MERGE_QUEUE_VIEW_TYPE = "note-merger-queue";
@@ -47,38 +47,41 @@ export class MergeQueueView extends ItemView {
         const active = this.app.workspace.getActiveFile();
         if (!active) { new Notice("Open a target note first"); return; }
 
-        // Find the Smart Connections view container
         const scLeaves = this.app.workspace.getLeavesOfType("smart-connections-view");
         if (!scLeaves.length) { new Notice("Smart Connections panel not open"); return; }
 
-        let added = 0;
+        const candidates: TFile[] = [];
         for (const leaf of scLeaves) {
             const scContainer = leaf.view.containerEl;
-            // Query all visible .sc-result elements with data-path
             const results = scContainer.querySelectorAll(".sc-result[data-path]");
             for (const el of Array.from(results)) {
                 const htmlEl = el as HTMLElement;
-                // Skip hidden results
                 if (htmlEl.dataset.hidden === "true" || htmlEl.style.display === "none") continue;
 
                 const filePath = htmlEl.dataset.path;
                 if (!filePath) continue;
 
-                // Resolve .md path
                 const fullPath = filePath.endsWith(".md") ? filePath : filePath + ".md";
                 const file = this.app.vault.getAbstractFileByPath(fullPath);
                 if (!(file instanceof TFile)) continue;
-                if (file.path === active.path) continue; // skip the active note itself
-                if (this.queuedFiles.some(f => f.path === file.path)) continue; // skip duplicates
-
-                this.queuedFiles.push(file);
-                added++;
+                if (file.path === active.path) continue;
+                if (this.queuedFiles.some(f => f.path === file.path)) continue;
+                if (!candidates.some(c => c.path === file.path)) candidates.push(file);
             }
         }
 
-        if (added > 0) {
-            this.renderList();
-            new Notice(`Imported ${added} note(s) from Smart Connections`);
+        if (candidates.length > 0) {
+            new SmartConnectionsImportModal(this.app, candidates, (selected) => {
+                let added = 0;
+                for (const file of selected) {
+                    this.queuedFiles.push(file);
+                    added++;
+                }
+                if (added > 0) {
+                    this.renderList();
+                    new Notice(`Imported ${added} note(s) from Smart Connections`);
+                }
+            }).open();
         } else {
             new Notice("No new notes found in Smart Connections panel");
         }
@@ -144,4 +147,62 @@ export class MergeQueueView extends ItemView {
     }
 
     async onClose() {}
+}
+
+class SmartConnectionsImportModal extends Modal {
+    candidates: TFile[];
+    selected: Set<string>;
+    onSubmit: (selected: TFile[]) => void;
+
+    constructor(app: any, candidates: TFile[], onSubmit: (selected: TFile[]) => void) {
+        super(app);
+        this.candidates = candidates;
+        this.selected = new Set(candidates.map(c => c.path));
+        this.onSubmit = onSubmit;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        
+        contentEl.createEl("h2", { text: "Import from Smart Connections" });
+        contentEl.createEl("p", { text: "Select the notes you want to import to the Merge Queue:", cls: "note-merger-batch-count" });
+
+        const listContainer = contentEl.createDiv({ cls: "note-merger-batch-list" });
+        
+        this.candidates.forEach(file => {
+            const item = listContainer.createDiv({ cls: "note-merger-batch-item" });
+            const cb = item.createEl("input", { type: "checkbox" }) as HTMLInputElement;
+            cb.checked = true;
+            cb.onchange = () => {
+                if (cb.checked) this.selected.add(file.path);
+                else this.selected.delete(file.path);
+            };
+            item.createSpan({ text: file.basename, cls: "note-merger-batch-name", title: file.path });
+            item.style.cursor = "pointer";
+            item.onclick = (e) => {
+                if (e.target !== cb) {
+                    cb.click();
+                }
+            };
+        });
+
+        const btnContainer = contentEl.createDiv({ cls: "note-merger-queue-footer" });
+        btnContainer.style.flexDirection = "row";
+        btnContainer.style.justifyContent = "flex-end";
+        btnContainer.style.marginTop = "16px";
+
+        btnContainer.createEl("button", { text: "Cancel" }).onclick = () => this.close();
+        
+        const submitBtn = btnContainer.createEl("button", { text: "Import Selected", cls: "mod-cta" });
+        submitBtn.onclick = () => {
+            const chosen = this.candidates.filter(c => this.selected.has(c.path));
+            this.onSubmit(chosen);
+            this.close();
+        };
+    }
+
+    onClose() {
+        this.contentEl.empty();
+    }
 }
