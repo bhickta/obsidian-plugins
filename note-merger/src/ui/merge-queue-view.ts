@@ -10,6 +10,7 @@ export class MergeQueueView extends ItemView {
     private countEl!: HTMLElement;
     private dropZone!: HTMLElement;
     private mergeBtn!: HTMLButtonElement;
+    private importBtn!: HTMLButtonElement;
 
     constructor(leaf: WorkspaceLeaf, plugin: NoteMergerPlugin) { super(leaf); this.plugin = plugin; }
     getViewType() { return MERGE_QUEUE_VIEW_TYPE; }
@@ -21,9 +22,13 @@ export class MergeQueueView extends ItemView {
         c.empty(); c.addClass("note-merger-queue-container");
         c.createDiv({ cls: "note-merger-queue-header" }).createEl("h4", { text: "Merge Queue" });
 
+        // Import from Smart Connections button
+        this.importBtn = c.createEl("button", { text: "⬇ Import from Smart Connections", cls: "note-merger-import-sc-btn" });
+        this.importBtn.onclick = () => this.importFromSmartConnections();
+
         this.dropZone = c.createDiv({ cls: "note-merger-drop-zone" });
         this.dropZone.createDiv({ cls: "note-merger-drop-icon", text: "⊕" });
-        this.dropZone.createDiv({ cls: "note-merger-drop-text", text: "Drag notes here from Smart Connections" });
+        this.dropZone.createDiv({ cls: "note-merger-drop-text", text: "Drag notes here or use Import button above" });
         this.setupDragHandlers(this.dropZone);
         this.setupDragHandlers(c);
 
@@ -36,6 +41,47 @@ export class MergeQueueView extends ItemView {
         this.mergeBtn.onclick = () => this.handleMerge();
         footer.createEl("button", { text: "Clear", cls: "note-merger-queue-clear-btn" }).onclick = () => { this.queuedFiles = []; this.renderList(); };
         this.renderList();
+    }
+
+    private importFromSmartConnections() {
+        const active = this.app.workspace.getActiveFile();
+        if (!active) { new Notice("Open a target note first"); return; }
+
+        // Find the Smart Connections view container
+        const scLeaves = this.app.workspace.getLeavesOfType("smart-connections-view");
+        if (!scLeaves.length) { new Notice("Smart Connections panel not open"); return; }
+
+        let added = 0;
+        for (const leaf of scLeaves) {
+            const scContainer = leaf.view.containerEl;
+            // Query all visible .sc-result elements with data-path
+            const results = scContainer.querySelectorAll(".sc-result[data-path]");
+            for (const el of Array.from(results)) {
+                const htmlEl = el as HTMLElement;
+                // Skip hidden results
+                if (htmlEl.dataset.hidden === "true" || htmlEl.style.display === "none") continue;
+
+                const filePath = htmlEl.dataset.path;
+                if (!filePath) continue;
+
+                // Resolve .md path
+                const fullPath = filePath.endsWith(".md") ? filePath : filePath + ".md";
+                const file = this.app.vault.getAbstractFileByPath(fullPath);
+                if (!(file instanceof TFile)) continue;
+                if (file.path === active.path) continue; // skip the active note itself
+                if (this.queuedFiles.some(f => f.path === file.path)) continue; // skip duplicates
+
+                this.queuedFiles.push(file);
+                added++;
+            }
+        }
+
+        if (added > 0) {
+            this.renderList();
+            new Notice(`Imported ${added} note(s) from Smart Connections`);
+        } else {
+            new Notice("No new notes found in Smart Connections panel");
+        }
     }
 
     private setupDragHandlers(el: HTMLElement) {
@@ -75,8 +121,9 @@ export class MergeQueueView extends ItemView {
 
     renderList() {
         this.listEl.empty();
-        if (!this.queuedFiles.length) { this.countEl.setText(""); this.mergeBtn.disabled = true; this.dropZone.style.display = ""; return; }
+        if (!this.queuedFiles.length) { this.countEl.setText(""); this.mergeBtn.disabled = true; this.dropZone.style.display = ""; this.importBtn.style.display = ""; return; }
         this.dropZone.style.display = "none";
+        this.importBtn.style.display = "none";
         this.countEl.setText(`${this.queuedFiles.length} note(s) queued:`);
         this.mergeBtn.disabled = false;
         this.queuedFiles.forEach((file, i) => {

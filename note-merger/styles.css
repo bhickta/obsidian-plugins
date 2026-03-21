@@ -279,7 +279,25 @@ details summary:hover {
 }
 
 .note-merger-queue-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.note-merger-import-sc-btn {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85em;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.note-merger-import-sc-btn:hover {
+  opacity: 0.85;
 }
 
 .note-merger-queue-header h4 {
