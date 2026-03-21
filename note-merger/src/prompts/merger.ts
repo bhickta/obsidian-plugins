@@ -49,28 +49,32 @@ RULE 4 — DE-DUPLICATION & CONFLICT RESOLUTION
 - After writing all sections, re-read every bullet. If the same fact appears in two sections, delete it from the less specific one and keep it only in the section where it is most central.
 
 ════════════════════════════════════════
-RULE 5 — FILE SPLITTING (CRITICAL)
+RULE 5 — FILE SPLITTING (STRICT)
 ════════════════════════════════════════
-Cluster facts into logical sections by SHARED CONTEXT — same district, same river system, same administrative unit, same theme → ONE file.
+DEFAULT IS TO MERGE. Split only when you can answer YES to ALL THREE questions:
+  1. Would a UPSC student open a separate tab/chapter to revise this?
+  2. Does this content belong to a clearly different district, era, legal act, or thematic domain?
+  3. Will this section have at least 4 bullets on its own?
 
-The goal is CONSOLIDATION, not fragmentation. Do NOT create a separate file for every individual entity. Ask: "Do these facts belong to the same topic a student would revise together?" If yes, keep them in one file.
+If any answer is NO → keep it in the same file as the most related content.
 
-  RIGHT — all lakes of Shimla District share district + theme → one file:
-    ===FILE: Lakes of Shimla District===
-    - **Chandranahan Lake**: ...
-    - **Karali Lake**: ...
-    - **Tani-Jubbar Lake**: ...
+HARD LIMITS:
+- MINIMUM 4 bullets per FILE section. Fewer → absorb into nearest related section, no exceptions.
+- OUTPUT FILE COUNT must be ≤ number of source files. If you received 3 source files, produce at most 3 FILE sections. If you received 5 source files, produce at most 5. Never produce more files than you received.
+- Never split by sub-topic within a single entity or narrative. Geography + etymology + mythology of the same place = ONE file, not three.
 
-  WRONG — splitting each lake into its own file:
-    ===FILE: Chandranahan Lake Rohru Tehsil===
-    ===FILE: Karali Lake Shimla District===
-    ===FILE: Tani Jubbar Lake Narkanda===
+  RIGHT — HP/Jalandhara geography, etymology, mythology all concern one place → two files max:
+    ===FILE: Jalandhara Geography Etymology HP===
+    ===FILE: Jalandhara Mythology Legends Sacred Geography===
 
-Split into a NEW file only when entities belong to a clearly different district, river basin, or thematic category — not merely because they are distinct named objects within the same category.
+  WRONG — splitting sub-aspects of the same entity:
+    ===FILE: Etymology of Himachal Pradesh Name===
+    ===FILE: Ancient Himalayan Geographical Divisions===
+    ===FILE: Jalandhara Etymology and Hydrography===
+    ===FILE: Jalandhara Trigarta Mythology and Genealogy===
+    ===FILE: Legends of Jalandhara Death and Sacred Body===
 
-MINIMUM DENSITY RULE: A FILE section must contain at least 4 bullets. If a section has fewer than 4 bullets, absorb it into the nearest thematically related section rather than leaving it as a stub.
-
-TOPIC MISMATCH RULE: If source content belongs to a clearly different topic or entity than the majority of the input (e.g., traveler records mixed into a janapada note), create a separate FILE for it and append [TOPIC MISMATCH] to the FILE delimiter title:
+TOPIC MISMATCH RULE: If source content belongs to a clearly different topic than the majority of the input (e.g., traveler records mixed into a janapada note), isolate it in its own FILE and append [TOPIC MISMATCH] to the title:
   ===FILE: European Travelers Kangra Valley [TOPIC MISMATCH]===
 
 Every section MUST begin with exactly this delimiter on its own line:
@@ -87,7 +91,7 @@ SELF-CHECK (run mentally before finalising output)
 3. Does any fact appear more than once across sections? → MERGE it, keeping it only in the most relevant section.
 4. Does any bullet span multiple lines for a single concept? → COLLAPSE it.
 5. Are all FILE delimiters correctly formatted with no blank line before the first bullet?
-6. Are entities that share district/theme/basin grouped into ONE file, not split across many?
-7. Does any FILE section have fewer than 4 bullets? → ABSORB it into the nearest related section.
+6. Does any FILE section have fewer than 4 bullets? → ABSORB it, no exceptions.
+7. Is the total FILE count greater than the number of source files received? → MERGE until it is not.
 8. Did I add any date, figure, or name not explicitly present in the sources? → DELETE it.
 `;
