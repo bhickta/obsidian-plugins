@@ -1,8 +1,8 @@
-import { Plugin, TFile, Notice, MarkdownView, MarkdownFileInfo, Editor } from "obsidian";
+import { Plugin, TFile, TFolder, Notice, MarkdownView, MarkdownFileInfo, Editor } from "obsidian";
 import { DEFAULT_SETTINGS, PluginSettings, TrainingRecord } from "./config";
 import { CONTENT_MERGER_PROMPT } from "./prompts";
 import { mergeWithRetry, KeyManager, appendToTrainingDataset } from "./services";
-import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal } from "./modals";
+import { MasterFileSelectorModal, MergeWithModal, BatchLinkMergeModal, CopyContentModal } from "./modals";
 import { NoteMergerSettingTab, MergeQueueView, MERGE_QUEUE_VIEW_TYPE } from "./ui";
 
 export default class NoteMergerPlugin extends Plugin {
@@ -89,6 +89,94 @@ export default class NoteMergerPlugin extends Plugin {
         });
 
         this.addRibbonIcon('check-circle', 'Toggle Read/Unread Status', toggleStatus);
+
+        // Copy content from folder
+        this.addCommand({
+            id: 'copy-folder-content',
+            name: 'Copy content from current folder',
+            callback: () => {
+                const active = this.app.workspace.getActiveFile();
+                if (!active || !active.parent) { new Notice("Open a note inside a folder first."); return; }
+                const folderFiles = active.parent.children.filter(c => c instanceof TFile && c.extension === "md") as TFile[];
+                folderFiles.sort((a, b) => a.basename.localeCompare(b.basename));
+                new CopyContentModal(this.app, folderFiles, active.parent.name).open();
+            }
+        });
+
+        // Right-click folder context menu
+        this.registerEvent(
+            this.app.workspace.on('file-menu', (menu, file) => {
+                if (file instanceof TFolder) {
+                    menu.addItem(item => {
+                        item.setTitle("Copy content from files")
+                            .setIcon("copy")
+                            .onClick(() => {
+                                const folderFiles = file.children.filter(c => c instanceof TFile && c.extension === "md") as TFile[];
+                                folderFiles.sort((a, b) => a.basename.localeCompare(b.basename));
+                                new CopyContentModal(this.app, folderFiles, file.name).open();
+                            });
+                    });
+                }
+            })
+        );
+
+        // Smart Copy Command (Reads Highlights OR Base View Items)
+        this.addCommand({
+            id: 'copy-content-from-selection',
+            name: 'Copy content from highlighted text or active view',
+            callback: async () => {
+                let text = "";
+                const editor = this.app.workspace.activeEditor?.editor;
+                if (editor) text = editor.getSelection();
+                if (!text) text = window.getSelection()?.toString() || "";
+                
+                const names = new Set<string>();
+                
+                // 1. If user highlighted text, extract links from it
+                if (text.trim().length > 0) {
+                    const wikiRe = /\[\[([^\]|#]+)(?:[#|][^\]]*)?]]/g;
+                    let m;
+                    while ((m = wikiRe.exec(text)) !== null) names.add(m[1].trim());
+                    if (names.size === 0) {
+                        for (const line of text.split("\n")) {
+                            const c = line.replace(/^[\s\-\*\\>•\d\.]+/, "").replace(/\.md$/i, "").trim();
+                            if (c.length > 0) names.add(c);
+                        }
+                    }
+                } 
+                // 2. Fallback: Parse the active view DOM (e.g. Base view list items)
+                else {
+                    const view = this.app.workspace.activeLeaf?.view;
+                    if (!view) { new Notice("Highlight some text or focus a list view first!"); return; }
+                    
+                    const elems = view.containerEl.querySelectorAll('a.internal-link, [data-path], .bases-entry-title, .title, .name');
+                    elems.forEach(el => {
+                        const path = el.getAttribute('data-path') || el.getAttribute('href') || el.textContent;
+                        if (path) {
+                            const clean = path.replace(/\.md$/i, "").replace(/^[\s\-\*\\>•\d\.]+/, "").trim();
+                            if (clean) names.add(clean);
+                        }
+                    });
+                }
+                
+                const resolvedFiles: TFile[] = [];
+                for (const name of names) {
+                    const file = this.app.metadataCache.getFirstLinkpathDest(name, "");
+                    if (file && !resolvedFiles.some(f => f.path === file.path)) {
+                        resolvedFiles.push(file);
+                    }
+                }
+                
+                if (resolvedFiles.length === 0) {
+                    new Notice("No files could be resolved. Highlight text containing filenames and try again.");
+                    return;
+                }
+                
+                // Open our modal with the scraped files (maintaining strict DOM/Selection ordering!)
+                const sourceTitle = ((this.app.workspace.activeLeaf?.view as any)?.title || "Extracted Links").replace(".base", "");
+                new CopyContentModal(this.app, resolvedFiles, sourceTitle).open();
+            }
+        });
     }
 
     async activateMergeQueue() {
