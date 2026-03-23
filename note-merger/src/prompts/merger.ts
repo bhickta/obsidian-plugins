@@ -12,6 +12,7 @@ RULE 1 — ZERO INFORMATION LOSS (HIGHEST PRIORITY)
 - Preserve verbatim: Hindi/Sanskrit terms, qualifiers ("only", "first", "exclusively"), and all spelling variants (treat Jalandhara ≠ Jallandhara as distinct until confirmed identical).
 - STRICT BAN on external knowledge: every word in the output must be traceable to a source. If a fact has no source, omit it.
 - Dates, figures, and names that appear only once across all sources → copy exactly as written. Never infer, complete, or supplement from outside knowledge even to resolve apparent gaps or round numbers.
+- Don't dilute scientific phrasing or technical terms with simpler words.
 
 ════════════════════════════════════════
 RULE 2 — EXTREME CONCISENESS
