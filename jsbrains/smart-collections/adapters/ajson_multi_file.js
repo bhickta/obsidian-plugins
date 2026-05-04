@@ -7,6 +7,48 @@ const class_to_collection_key = {
   'SmartBlock': 'smart_blocks',
   'SmartDirectory': 'smart_directories',
 };
+
+/**
+ * Normalize append-only JSON lines into one parseable JSON object string.
+ *
+ * AJSON entries are stored as `"collection:key": {...},` lines. Older files
+ * may contain blank lines, missing trailing commas, or doubled trailing commas
+ * after interrupted writes/repairs. Normalizing per line avoids turning blank
+ * lines into bare commas, which makes JSON.parse fail with
+ * "Expected double-quoted property name".
+ *
+ * @param {string} ajson
+ * @returns {{json_str:string, entry_count:number, changed:boolean}}
+ */
+export function normalize_ajson_to_json_object_string(ajson) {
+  const lines = String(ajson || '').split(/\r?\n/);
+  const entries = [];
+  let changed = false;
+
+  for (const raw_line of lines) {
+    const line = raw_line.trim();
+    if (!line) {
+      if (raw_line.length > 0) changed = true;
+      continue;
+    }
+
+    const entry = line.replace(/,+\s*$/, '').trim();
+    if (!entry) {
+      changed = true;
+      continue;
+    }
+
+    if (entry !== line || !line.endsWith(',')) changed = true;
+    entries.push(entry);
+  }
+
+  return {
+    json_str: `{${entries.join(',')}}`,
+    entry_count: entries.length,
+    changed,
+  };
+}
+
 /**
  * @class AjsonMultiFileCollectionDataAdapter
  * @extends FileCollectionDataAdapter
@@ -234,8 +276,10 @@ export class AjsonMultiFileItemDataAdapter extends FileItemDataAdapter {
   
       ajson = ajson.trim();
   
-      const original_line_count = ajson.split('\n').length;
-      const json_str = '{' + ajson.slice(0, -1) + '}'; // remove trailing comma and wrap in braces
+      const original_line_count = ajson.split(/\r?\n/).filter(line => line.trim()).length;
+      const normalized = normalize_ajson_to_json_object_string(ajson);
+      if (normalized.changed) rewrite = true;
+      const json_str = normalized.json_str;
       const data = JSON.parse(json_str);
       
       const entries = Object.entries(data);
@@ -281,14 +325,7 @@ export class AjsonMultiFileItemDataAdapter extends FileItemDataAdapter {
           : null
       };
     } catch (e) {
-      // Try fixing trailing commas if needed (for backwards compatibility)
-      if (ajson.split('\n').some(line => !line.endsWith(','))) {
-        console.warn("fixing trailing comma error");
-        ajson = ajson.split('\n').map(line => line.endsWith(',') ? line : line + ',').join('\n');
-        return this._parse(ajson);
-      }
-      console.warn("Error parsing JSON:", e);
-      return { rewrite: true, file_data: null };
+      throw e;
     }
   }
   _parse_ajson_key(ajson_key){
