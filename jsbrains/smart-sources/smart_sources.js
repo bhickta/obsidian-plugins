@@ -26,6 +26,70 @@ export class SmartSources extends SmartEntities {
     this.sources_re_import_timeout = null;
     /** @type {boolean} */
     this.sources_re_import_halted = false;
+    this.startup_health = this.create_startup_health();
+  }
+
+  /**
+   * Creates the startup health state shown in the plugin UI.
+   * @returns {Object}
+   */
+  create_startup_health() {
+    return {
+      started_at: Date.now(),
+      updated_at: Date.now(),
+      source_count: 0,
+      load_time_ms: null,
+      import_queue_count: null,
+      imported_count: null,
+      import_time_ms: null,
+      embed_queue_count: null,
+      embedded_count: null,
+      embed_time_ms: null,
+      links_time_ms: null,
+      skipped_sources: {},
+    };
+  }
+
+  /**
+   * Merges startup health data and notifies UI listeners.
+   * @param {Object} patch
+   * @returns {Object}
+   */
+  update_startup_health(patch = {}) {
+    this.startup_health = {
+      ...this.startup_health,
+      ...patch,
+      updated_at: Date.now(),
+    };
+    this.emit_event('startup_health:updated', { startup_health: this.startup_health });
+    return this.startup_health;
+  }
+
+  /**
+   * Records an import skip without logging every skipped file to the console.
+   * @param {string} reason
+   * @param {import('./smart_source.js').SmartSource} source
+   * @param {Object} [details]
+   * @returns {void}
+   */
+  record_import_skip(reason, source, details = {}) {
+    const skipped_sources = { ...(this.startup_health?.skipped_sources || {}) };
+    const bucket = skipped_sources[reason] || {
+      count: 0,
+      examples: [],
+      total_size: 0,
+      max_size: 0,
+    };
+    bucket.count += 1;
+    if (typeof details.size === 'number') {
+      bucket.total_size += details.size;
+      bucket.max_size = Math.max(bucket.max_size || 0, details.size);
+    }
+    if (bucket.examples.length < 8) {
+      bucket.examples.push(source?.path || source?.key || 'unknown');
+    }
+    skipped_sources[reason] = bucket;
+    this.update_startup_health({ skipped_sources });
   }
 
   /**
@@ -254,7 +318,7 @@ export class SmartSources extends SmartEntities {
     if (this._embed_queue?.length) {
       const embed_start_at = Date.now();
       await this.process_embed_queue();
-      console.log(`Processed embed queue in ${Date.now() - embed_start_at}ms`);
+      console.debug(`Processed embed queue in ${Date.now() - embed_start_at}ms`);
     }
     if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     this.sources_re_import_timeout = null;
@@ -351,7 +415,8 @@ export class SmartSources extends SmartEntities {
       }
     }
     const end_time = Date.now();
-    console.log(`Time spent building links: ${end_time - start_time}ms`);
+    this.update_startup_health({ links_time_ms: end_time - start_time });
+    console.debug(`Time spent building links: ${end_time - start_time}ms`);
     return this.links;
   }
 
@@ -466,7 +531,12 @@ export class SmartSources extends SmartEntities {
    * @returns {Promise<void>}
    */
   async process_load_queue(){
+    const load_started_at = Date.now();
     await super.process_load_queue();
+    this.update_startup_health({
+      source_count: Object.keys(this.items || {}).length,
+      load_time_ms: this.load_time_ms ?? Date.now() - load_started_at,
+    });
     if(this.collection_key === 'smart_sources' && this.env.smart_blocks){ // Excludes sub-classes
       Object.values(this.env.smart_blocks.items).forEach(item => item.init()); // Sets _queue_embed if no vec
     }
@@ -489,16 +559,27 @@ export class SmartSources extends SmartEntities {
     const { process_embed_queue = true, force = false } = opts;
     if (force) Object.values(this.items).forEach(item => item._queue_import = true);
     const import_queue = Object.values(this.items).filter(item => item._queue_import);
-    console.log("import_queue " + import_queue.length);
+    this.update_startup_health({
+      source_count: Object.keys(this.items || {}).length,
+      import_queue_count: import_queue.length,
+      imported_count: 0,
+      import_time_ms: import_queue.length ? null : 0,
+      skipped_sources: {},
+    });
+    console.debug("import_queue " + import_queue.length);
     if(import_queue.length){
       const time_start = Date.now();
+      let imported_count = 0;
       // Import 100 at a time
       for (let i = 0; i < import_queue.length; i += 100) {
         this.notices?.show('import_progress', {
           progress: i,
           total: import_queue.length,
         });
-        await Promise.all(import_queue.slice(i, i + 100).map(item => item.import()));
+        await Promise.all(import_queue.slice(i, i + 100).map(async item => {
+          await item.import();
+          imported_count += 1;
+        }));
       }
       setTimeout(() => {
         this.notices?.remove('import_progress');
@@ -508,6 +589,10 @@ export class SmartSources extends SmartEntities {
         count: import_queue.length,
         time_in_seconds: (Date.now() - time_start) / 1000
       });
+      this.update_startup_health({
+        imported_count,
+        import_time_ms: Date.now() - time_start,
+      });
 
     } else {
       this.notices?.show('no_import_queue');
@@ -515,7 +600,7 @@ export class SmartSources extends SmartEntities {
 
     this.build_links_map();
     if(process_embed_queue) await this.process_embed_queue();
-    else console.log("skipping process_embed_queue");
+    else console.debug("skipping process_embed_queue");
     await this.process_save_queue();
     await this.block_collection?.process_save_queue();
     this.emit_event('sources:import_completed');

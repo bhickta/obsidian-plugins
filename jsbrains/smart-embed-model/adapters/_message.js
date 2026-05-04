@@ -75,7 +75,7 @@ export class SmartEmbedMessageAdapter extends SmartEmbedAdapter {
         if (!id.startsWith(this.message_prefix)) return;
 
         if (result?.model_loaded) {
-            console.log('model loaded');
+            console.debug('model loaded');
             this.state = 'loaded';
             this.model.model_loaded = true; // DEPRECATED
             this.model.load_result = result;
@@ -128,4 +128,4 @@ export class SmartEmbedMessageAdapter extends SmartEmbedAdapter {
     _post_message(message_data) {
         throw new Error('_post_message must be implemented by subclass');
     }
-} 
+}

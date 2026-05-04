@@ -53,11 +53,11 @@ export class ConnectionsItemView extends SmartItemView {
       }
     });
     register_env_event_listener(this, 'connections:show', (event) => {
-      console.log('connections:show event received', {event});
+      console.debug('connections:show event received', {event});
       if(event.collection_key && event.item_key){
         const collection = this.env[event.collection_key];
         const item = collection.get(event.item_key);
-        console.log({collection, item});
+        console.debug({collection, item});
         if(item){
           this.set_connections_paused(true);
           this.render_view({connections_item: item});
@@ -107,7 +107,7 @@ function is_visible(container) {
     return false;
   }
   if(typeof container.checkVisibility === 'function' && container.checkVisibility() === false) {
-    console.log('Connections container is not visible');
+    console.debug('Connections container is not visible');
     return false;
   }
   return true;

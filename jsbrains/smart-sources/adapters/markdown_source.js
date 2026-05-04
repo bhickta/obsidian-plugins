@@ -110,17 +110,52 @@ export class MarkdownSourceContentAdapter extends FileSourceContentAdapter {
   }
 
 
-  // Erroneous reasons to skip import (logs to console)
+  // Reasons to skip import are summarized in startup health instead of logged per file.
   get can_import() {
     if(!this.item.file){
-      console.warn(`MarkdownSourceContentAdapter: Skipping missing-file: ${this.file_path}`);
+      this.record_import_skip('missing_file');
       return false;
     }
-    if(this.item.size > (this.settings?.max_import_size || 300000)) { // if file is larger than 300kb, skip
-      console.warn(`MarkdownSourceContentAdapter: Skipping large file: ${this.file_path}`);
+    const max_import_size = this.settings?.max_import_size || 300000;
+    if(this.item.size > max_import_size) { // if file is larger than 300kb, skip
+      this.record_import_skip('large_file', {
+        size: this.item.size,
+        max_size: max_import_size,
+      });
+      this.mark_import_skipped('large_file');
       return false;
     }
     return true;
+  }
+
+  /**
+   * Records an import skip in the collection startup health summary.
+   * @param {string} reason
+   * @param {Object} [details]
+   * @returns {void}
+   */
+  record_import_skip(reason, details = {}) {
+    this.item.collection.record_import_skip?.(reason, this.item, details);
+  }
+
+  /**
+   * Persists an intentional skip so unchanged large files do not re-import on every launch.
+   * @param {string} reason
+   * @returns {void}
+   */
+  mark_import_skipped(reason) {
+    const { mtime = this.item.mtime, size = this.item.size } = this.item.file?.stat || {};
+    this.data.last_import = {
+      mtime,
+      size,
+      at: Date.now(),
+      hash: this.data.last_read?.hash || null,
+      skipped: true,
+      reason,
+    };
+    if(!this.data.blocks) this.data.blocks = {};
+    this.item.loaded_at = Date.now();
+    this.item.queue_save();
   }
 
   /**

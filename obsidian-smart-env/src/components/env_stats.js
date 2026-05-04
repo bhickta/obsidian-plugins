@@ -15,6 +15,7 @@ import { format_collection_name } from "../utils/format_collection_name.js";
 
 export async function build_html(env, opts = {}) {
   const lines = [];
+  lines.push(generate_startup_health(env));
   lines.push(`<h2>Collections</h2>`);
 
   const collection_keys = Object.keys(env.collections)
@@ -98,6 +99,59 @@ function get_generic_collection_stats(collection, niceName, total_items, load_ti
       <p><strong>Total:</strong> ${total_items}</p>
   `;
 }
+
+function generate_startup_health(env) {
+  const health = env?.smart_sources?.startup_health;
+  if (!health) return '';
+  const skipped_entries = Object.entries(health.skipped_sources || {});
+  const skipped_html = skipped_entries.length
+    ? skipped_entries.map(([reason, entry]) => {
+      const examples = Array.isArray(entry.examples) && entry.examples.length
+        ? `<br><small>${entry.examples.map(escape_html).join('<br>')}</small>`
+        : '';
+      return `<p><strong>${format_reason(reason)}:</strong> ${entry.count}${examples}</p>`;
+    }).join('')
+    : '<p><strong>Skipped imports:</strong> 0</p>'
+  ;
+  return `
+    <h2>Startup health</h2>
+    <div class="sc-startup-health">
+      <p><strong>Sources:</strong> ${health.source_count ?? 0}</p>
+      <p><strong>Load:</strong> ${format_duration(health.load_time_ms)}</p>
+      <p><strong>Import queue:</strong> ${format_count(health.import_queue_count)}</p>
+      <p><strong>Imported:</strong> ${format_count(health.imported_count)} (${format_duration(health.import_time_ms)})</p>
+      <p><strong>Embed queue:</strong> ${format_count(health.embed_queue_count)}</p>
+      <p><strong>Embedded:</strong> ${format_count(health.embedded_count)} (${format_duration(health.embed_time_ms)})</p>
+      <p><strong>Links:</strong> ${format_duration(health.links_time_ms)}</p>
+      ${skipped_html}
+    </div>
+  `;
+}
+
+function format_duration(ms) {
+  if (ms === null || ms === undefined) return 'pending';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function format_count(count) {
+  if (count === null || count === undefined) return 'pending';
+  return String(count);
+}
+
+function format_reason(reason) {
+  return escape_html(String(reason || 'skipped').replace(/_/g, ' '));
+}
+
+function escape_html(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+  ;
+}
 export function calculate_embed_coverage(collection, total_items) {
   const embedded_items = Object.values(collection.items).filter(item => item.vec);
   if(!embedded_items.length) return '<p>No items embedded</p>';
@@ -117,5 +171,4 @@ export function calculate_embed_coverage(collection, total_items) {
     + (stats.should_not_embed ? `<p><strong>Other items (e.g. less than minimum length to embed):</strong> ${stats.should_not_embed}</p>` : '')
   ;
 }
-
 

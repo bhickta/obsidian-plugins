@@ -40,6 +40,19 @@ export class SmartSource extends SmartEntity {
   }
 
   /**
+   * Determines whether a source should be imported after cached data loads.
+   * @returns {boolean}
+   */
+  should_import_after_load() {
+    if (this.is_gone) return false;
+    const last_import_mtime = this.last_import?.mtime || 0;
+    if (!this.last_import) return true;
+    if (this.init_file_mtime && (!last_import_mtime || this.init_file_mtime > last_import_mtime)) return true;
+    if (!this.data.blocks && !this.last_import?.skipped) return true;
+    return false;
+  }
+
+  /**
    * Queues the SmartSource for import.
    * @returns {void}
    */
@@ -58,7 +71,7 @@ export class SmartSource extends SmartEntity {
       this.emit_event('sources:imported');
     }catch(err){
       if(err.code === "ENOENT"){
-        console.log(`Smart Connections: Deleting ${this.path} data because it no longer exists on disk`);
+        console.debug(`Smart Connections: Deleting ${this.path} data because it no longer exists on disk`);
         this.delete();
       } else {
         console.warn("Smart Connections: Error during import: re-queueing import", err);

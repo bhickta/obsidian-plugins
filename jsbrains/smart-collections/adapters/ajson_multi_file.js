@@ -124,7 +124,7 @@ export class AjsonMultiFileCollectionDataAdapter extends FileCollectionDataAdapt
     }
   
     const now = Date.now();
-    console.log(`Loading ${this.collection.collection_key}: ${load_queue.length} items from disk`);
+    console.debug(`Loading ${this.collection.collection_key}: ${load_queue.length} items from disk`);
     const batch_size = 100; // could be configurable
   
     for (let i = 0; i < load_queue.length; i += batch_size) {
@@ -137,7 +137,8 @@ export class AjsonMultiFileCollectionDataAdapter extends FileCollectionDataAdapt
         });
       }));
     }
-    console.log(`Loaded ${this.collection.collection_key} from disk in ${Date.now() - now}ms`);
+    this.collection.load_time_ms = Date.now() - now;
+    console.debug(`Loaded ${this.collection.collection_key} from disk in ${this.collection.load_time_ms}ms`);
   
     this.collection.loaded = load_queue.length;
     this.collection.clear_process_notice('loading_collection');
@@ -155,7 +156,7 @@ export class AjsonMultiFileCollectionDataAdapter extends FileCollectionDataAdapt
   
 
     const save_queue = Object.values(this.collection.items).filter(item => item._queue_save);
-    console.log(`Saving ${this.collection.collection_key}: ${save_queue.length} items`);
+    console.debug(`Saving ${this.collection.collection_key}: ${save_queue.length} items`);
     const time_start = Date.now();
     const batch_size = 50; // configurable
   
@@ -176,7 +177,7 @@ export class AjsonMultiFileCollectionDataAdapter extends FileCollectionDataAdapt
       });
     }
   
-    console.log(`Saved ${this.collection.collection_key} in ${Date.now() - time_start}ms`);
+    console.debug(`Saved ${this.collection.collection_key} in ${Date.now() - time_start}ms`);
     this.collection.clear_process_notice('saving_collection');
     this.collection.emit_event('collection:save_completed');
 
@@ -252,7 +253,12 @@ export class AjsonMultiFileItemDataAdapter extends FileItemDataAdapter {
         if(file_data.length) await this.fs.write(this.data_path, file_data);
         else await this.fs.remove(this.data_path);
       }
-      const last_import_mtime = this.item.data.last_import?.at || 0;
+      this.item._queue_import = false;
+      if (typeof this.item.should_import_after_load === 'function') {
+        if (this.item.should_import_after_load()) this.item.queue_import();
+        return;
+      }
+      const last_import_mtime = this.item.data.last_import?.mtime || this.item.data.last_import?.at || 0;
       if(last_import_mtime && this.item.init_file_mtime > last_import_mtime){
         this.item.queue_import();
       }

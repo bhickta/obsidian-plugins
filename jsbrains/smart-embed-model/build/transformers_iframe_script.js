@@ -10,11 +10,11 @@ async function process_message(data) {
     let result;
     switch (method) {
       case 'init':
-        console.log('init');
+        console.debug('init');
         break;
       case 'load':
         const model_params = {data: params, ...params};
-        console.log('load', {model_params});
+        console.debug('load', {model_params});
         // model = new SmartEmbedModel({
         //   ...params,
         //   adapters: { transformers: SmartEmbedTransformersAdapter },

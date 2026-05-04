@@ -269,7 +269,7 @@ export class AjsonSingleFileCollectionDataAdapter extends AjsonMultiFileCollecti
       });
     }
 
-    console.log(`Saved (single-file) ${this.collection.collection_key} in ${Date.now() - time_start}ms`);
+    console.debug(`Saved (single-file) ${this.collection.collection_key} in ${Date.now() - time_start}ms`);
     this.collection.clear_process_notice('saving_collection');
     this.collection.emit_event('collection:save_completed');
   }

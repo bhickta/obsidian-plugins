@@ -145,7 +145,7 @@ export class SmartBlocks extends SmartEntities {
     const expired_blocks = Object.values(this.items)
       .filter(i => i.is_gone)
     ;
-    console.log(`Removing ${expired_blocks.length} expired blocks`);
+    console.debug(`Removing ${expired_blocks.length} expired blocks`);
     expired_blocks
       .forEach(i => i.delete())
     ;

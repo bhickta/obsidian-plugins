@@ -52,7 +52,7 @@ export class FileItemDataAdapter extends ItemDataAdapter {
       const loaded_at = this.item.loaded_at || 0;
       const data_file_stat = await this.fs.stat(data_path);
       if(data_file_stat.mtime > (loaded_at + 1 * 60 * 1000)) {
-        console.log(`Smart Collections: Re-loading item ${this.item.key} because it has been updated on disk`);
+        console.debug(`Smart Collections: Re-loading item ${this.item.key} because it has been updated on disk`);
         await this.load();
       }
     }

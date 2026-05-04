@@ -179,7 +179,7 @@ export class SmartEnv extends BaseSmartEnv {
 
   async wait_for_obsidian_sync() {
     while (this.obsidian_is_syncing) {
-      console.log("Smart Connections: Waiting for Obsidian Sync to finish");
+      console.debug("Smart Connections: Waiting for Obsidian Sync to finish");
       await new Promise(r => setTimeout(r, 1000));
       if(!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
     }

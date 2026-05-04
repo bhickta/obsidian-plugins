@@ -110,7 +110,7 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
    */
   async process_embed_queue() {
     if (this._is_processing_embed_queue) {
-      console.log("process_embed_queue is already running, skipping concurrent call.");
+      console.debug("process_embed_queue is already running, skipping concurrent call.");
       return;
     }
     this._is_processing_embed_queue = true;
@@ -127,29 +127,34 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
 
     try {
       const datetime_start = Date.now();
-      console.log(`Getting embed queue for ${this.collection.collection_key}...`);
+      console.debug(`Getting embed queue for ${this.collection.collection_key}...`);
       await new Promise(resolve => setTimeout(resolve, 1)); // allow event loop to breathe
       const embed_queue = this.collection.embed_queue;
       // Reset stats as in SmartEntities
       this._reset_embed_queue_stats();
+      this.collection.update_startup_health?.({
+        embed_queue_count: embed_queue.length,
+        embedded_count: 0,
+        embed_time_ms: embed_queue.length ? null : 0,
+      });
       
       if (this.collection.embed_model_key === "None") {
-        console.log(`Smart Connections: No active embedding model for ${this.collection.collection_key}, skipping embedding`);
+        console.debug(`Smart Connections: No active embedding model for ${this.collection.collection_key}, skipping embedding`);
         return;
       }
 
       if (!this.collection.embed_model) {
-        console.log(`Smart Connections: No active embedding model for ${this.collection.collection_key}, skipping embedding`);
+        console.debug(`Smart Connections: No active embedding model for ${this.collection.collection_key}, skipping embedding`);
         return;
       }
 
       if (!embed_queue.length) {
-        console.log(`Smart Connections: No items in ${this.collection.collection_key} embed queue`);
+        console.debug(`Smart Connections: No items in ${this.collection.collection_key} embed queue`);
         return;
       }
 
-      console.log(`Time spent getting embed queue: ${Date.now() - datetime_start}ms`);
-      console.log(`Processing ${this.collection.collection_key} embed queue: ${embed_queue.length} items`);
+      console.debug(`Time spent getting embed queue: ${Date.now() - datetime_start}ms`);
+      console.debug(`Processing ${this.collection.collection_key} embed queue: ${embed_queue.length} items`);
 
       // Process in batches according to embed_model.batch_size
       for (let i = 0; i < embed_queue.length; i += this.collection.embed_model.batch_size) {
@@ -191,7 +196,7 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
           this.last_save_total = this.embedded_total;
           await this.collection.process_save_queue();
           if(this.collection.block_collection) {
-            console.log(`Saving ${this.collection.block_collection.collection_key} block collection`);
+            console.debug(`Saving ${this.collection.block_collection.collection_key} block collection`);
             await this.collection.block_collection.process_save_queue();
           }
         }
@@ -203,6 +208,10 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
       if(this.collection.block_collection) {
         await this.collection.block_collection.process_save_queue();
       }
+      this.collection.update_startup_health?.({
+        embedded_count: this.embedded_total,
+        embed_time_ms: Date.now() - datetime_start,
+      });
     } finally {
       // Always clear the concurrency flag, even on errors or halts
       this._is_processing_embed_queue = false;
@@ -266,7 +275,7 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
    */
   halt_embed_queue_processing(msg=null) {
     this.is_queue_halted = true;
-    console.log("Embed queue processing halted");
+    console.debug("Embed queue processing halted");
     this.notices?.remove('embedding_progress');
     this.collection.emit_event('embedding:paused', {
       progress: this.embedded_total,
@@ -288,7 +297,7 @@ export class DefaultEntitiesVectorAdapter extends EntitiesVectorAdapter {
    * @returns {void}
    */
   resume_embed_queue_processing(delay = 0) {
-    console.log("resume_embed_queue_processing");
+    console.debug("resume_embed_queue_processing");
     this.notices?.remove('embedding_paused');
     setTimeout(() => {
       this.embedded_total = 0;

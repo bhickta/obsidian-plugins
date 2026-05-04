@@ -46,7 +46,7 @@ export class SmartEmbedIframeAdapter extends SmartEmbedMessageAdapter {
                 ${this.connector}
                 // Set up a message listener in the iframe
                 window.addEventListener('message', async (event) => {
-                    if (event.origin !== '${this.origin}' || event.data.iframe_id !== '${this.iframe_id}') return console.log('message ignored (listener)', event);
+                    if (event.origin !== '${this.origin}' || event.data.iframe_id !== '${this.iframe_id}') return console.debug('message ignored (listener)', event);
                     // Process the message and send the response back
                     const response = await process_message(event.data);
                     window.parent.postMessage({ ...response, iframe_id: '${this.iframe_id}' }, '${this.origin}');

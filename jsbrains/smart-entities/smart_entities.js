@@ -132,7 +132,7 @@ export class SmartEntities extends Collection {
     // console.log("nearest after std dev slice", top_k.length);
     // top_k = sort_by_len_adjusted_similarity(top_k); // tested
     // console.log(top_k);
-    console.log(`Found and returned ${top_k.length} ${this.collection_key}.`);
+    console.debug(`Found and returned ${top_k.length} ${this.collection_key}.`);
     return top_k;
   }
 
@@ -168,9 +168,9 @@ export class SmartEntities extends Collection {
    */
   get embed_queue() {
     if(!this._embed_queue?.length){
-      console.time(`Building embed queue`);
+      const embed_queue_started_at = Date.now();
       this._embed_queue = Object.values(this.items).filter(item => item._queue_embed || (item.is_unembedded && item.should_embed));
-      console.timeEnd(`Building embed queue`);
+      console.debug(`Built ${this.collection_key} embed queue in ${Date.now() - embed_queue_started_at}ms`);
     }
     return this._embed_queue;
   }

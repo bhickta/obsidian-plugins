@@ -113,7 +113,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
     this.has_gpu = await is_webgpu_available();
     try{
       if(this.loading) {
-        console.warn('[Transformers v2] load already in progress, waiting...');
+        console.debug('[Transformers v2] load already in progress, waiting...');
         while(this.loading) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -128,7 +128,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         await this.load_transformers_with_fallback();
         this.loading = false;
         this.loaded = true;
-        console.log(`[Transformers v2] model loaded using ${this.active_config_key}`, this);
+        console.debug(`[Transformers v2] model loaded using ${this.active_config_key}`, this);
       }
     }catch(e){
       this.loading = false;
@@ -220,21 +220,21 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
     for (const config of CONFIG_LIST_ORDER) {
       if (this.pipeline) break;
       if (config.includes("gpu") && !this.gpu_enabled) {
-        console.warn(`[Transformers v2: ${config}] skipping ${config} as GPU is disabled`);
+        console.debug(`[Transformers v2: ${config}] skipping ${config} as GPU is disabled`);
         continue;
       }
       try {
-        console.log(`[Transformers v2] trying to load pipeline on ${config}`);
+        console.debug(`[Transformers v2] trying to load pipeline on ${config}`);
         this.pipeline = await try_create(config);
         this.active_config_key = config;
         break;
       } catch (err) {
-        console.warn(`[Transformers v2: ${config}] failed to load pipeline on ${config}`, err);
+        console.debug(`[Transformers v2: ${config}] failed to load pipeline on ${config}`, err);
         last_error = err;
       }
     }
     if (this.pipeline) {
-      console.log(`[Transformers v2: ${this.active_config_key}] pipeline initialized using ${this.active_config_key}`);
+      console.debug(`[Transformers v2: ${this.active_config_key}] pipeline initialized using ${this.active_config_key}`);
     }else{
       throw last_error || new Error('Failed to initialize transformers pipeline');
     }

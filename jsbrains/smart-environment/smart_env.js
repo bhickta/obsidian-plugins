@@ -332,7 +332,7 @@ export class SmartEnv {
         await this[key].process_load_queue();
         this[key].load_time_ms = Date.now() - time_start; 
         this.collections[key] = 'loaded';
-        console.log(`Loaded ${this[key].collection_key} in ${this[key].load_time_ms}ms`);
+        console.debug(`Loaded ${this[key].collection_key} in ${this[key].load_time_ms}ms`);
       }
     }
   }
