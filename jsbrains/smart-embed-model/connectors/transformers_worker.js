@@ -638,6 +638,18 @@ var DEVICE_CONFIGS = {
     quantized: false
   }
 };
+var TRANSFORMERS_AUTO_GPU_BATCH_SIZE = 32;
+var TRANSFORMERS_AUTO_CPU_BATCH_SIZE = 8;
+function get_configured_transformers_batch_size(model2) {
+  const configured = Number(model2?.data?.batch_size ?? model2?.batch_size);
+  if (Number.isFinite(configured) && configured > 1) {
+    return Math.floor(configured);
+  }
+  return null;
+}
+function get_transformers_auto_batch_size(gpu_enabled = false) {
+  return gpu_enabled ? TRANSFORMERS_AUTO_GPU_BATCH_SIZE : TRANSFORMERS_AUTO_CPU_BATCH_SIZE;
+}
 var is_webgpu_available = async () => {
   if (!("gpu" in navigator)) return false;
   const adapter = await navigator.gpu.requestAdapter();
@@ -727,9 +739,7 @@ var SmartEmbedTransformersAdapter = class extends SmartEmbedAdapter {
    * @returns {number}
    */
   get batch_size() {
-    const configured = this.model.data.batch_size;
-    if (configured && configured > 0) return configured;
-    return this.gpu_enabled ? 16 : 8;
+    return get_configured_transformers_batch_size(this.model) || get_transformers_auto_batch_size(this.gpu_enabled);
   }
   get gpu_enabled() {
     if (this.has_gpu) {

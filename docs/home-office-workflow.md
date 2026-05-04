@@ -164,6 +164,34 @@ smart-connections-cache/
 
 Use the shell scripts only when you want command-line control or cloud API sync through `rclone`.
 
+## Faster Embedding On RTX 3090
+
+Local Transformers embedding now uses automatic batching:
+
+- GPU/WebGPU auto batch: `32`
+- CPU/WASM auto batch: `8`
+- Legacy `batch_size` value `1` is treated as auto.
+
+For an RTX 3090, start with auto. If it is stable and GPU memory is not close to full, edit the active embedding model and set:
+
+```text
+Embedding batch size: 64
+```
+
+If WebGPU resets, Obsidian freezes, or batch embedding falls back to individual items, reduce it:
+
+```text
+Embedding batch size: 16
+```
+
+Changing batch size does not change embedding quality. It only changes how many notes/blocks are sent to the local model at once.
+
+Watch GPU use while embedding:
+
+```bash
+watch -n 1 nvidia-smi
+```
+
 ## Home/GPU PC Setup
 
 1. Pull or keep the latest code.

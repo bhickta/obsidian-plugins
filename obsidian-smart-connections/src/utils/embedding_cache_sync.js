@@ -97,8 +97,8 @@ export async function push_embedding_cache(plugin) {
   try {
     return await run_push_embedding_cache(plugin);
   } catch (error) {
-    new Notice(`Embedding cache push failed: ${error.message}`);
-    throw error;
+    report_embedding_cache_sync_error('push', error);
+    return null;
   }
 }
 
@@ -156,8 +156,8 @@ export async function pull_embedding_cache(plugin, opts = {}) {
   try {
     return await run_pull_embedding_cache(plugin, opts);
   } catch (error) {
-    new Notice(`Embedding cache pull failed: ${error.message}`);
-    throw error;
+    report_embedding_cache_sync_error('pull', error);
+    return null;
   }
 }
 
@@ -208,8 +208,8 @@ export async function restore_latest_embedding_cache_backup(plugin) {
   try {
     return await run_restore_latest_embedding_cache_backup(plugin);
   } catch (error) {
-    new Notice(`Embedding cache restore failed: ${error.message}`);
-    throw error;
+    report_embedding_cache_sync_error('restore', error);
+    return null;
   }
 }
 
@@ -613,6 +613,12 @@ function is_same_or_child_path(path, candidate_path, parent_path) {
 
 function timestamp_for_path() {
   return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function report_embedding_cache_sync_error(action, error) {
+  const message = error?.message || String(error);
+  new Notice(`Embedding cache ${action} failed: ${message}`);
+  console.debug(`Smart Connections: embedding cache ${action} failed`, error);
 }
 
 function format_bytes(bytes) {

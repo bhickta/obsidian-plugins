@@ -173,7 +173,7 @@ export default class SmartConnectionsPlugin extends SmartPlugin {
 
   async check_for_updates() {
     if (await this.is_new_plugin_version(this.manifest.version)) {
-      console.log("opening release notes modal");
+      console.debug("opening release notes modal");
       try {
         this.ReleaseNotesView.open(this.app.workspace, this.manifest.version);
       } catch (e) {
@@ -202,7 +202,10 @@ export default class SmartConnectionsPlugin extends SmartPlugin {
         this.update_available = true;
       }
     } catch (error) {
-      console.error(error);
+      console.debug('Smart Connections update check skipped', {
+        status: error?.status,
+        message: error?.message,
+      });
     }
   }
 

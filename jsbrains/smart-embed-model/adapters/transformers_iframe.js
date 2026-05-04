@@ -4,7 +4,9 @@ import {
   transformers_defaults,
   transformers_settings_config, // DEPRECATED
   transformers_models,
-  settings_config
+  settings_config,
+  get_configured_transformers_batch_size,
+  get_transformers_auto_batch_size,
 } from "./transformers.js";
 /**
  * Adapter for running transformer models in an iframe
@@ -39,6 +41,17 @@ export class SmartEmbedTransformersIframeAdapter extends SmartEmbedIframeAdapter
   get_models() { return Promise.resolve(this.models); }
   get models() {
     return transformers_models;
+  }
+
+  get batch_size() {
+    return get_configured_transformers_batch_size(this.model)
+      || get_transformers_auto_batch_size(this.gpu_likely_available)
+    ;
+  }
+
+  get gpu_likely_available() {
+    if (this.model?.data?.use_gpu === false) return false;
+    return typeof navigator !== 'undefined' && Boolean(navigator.gpu);
   }
 }
 export { settings_config };

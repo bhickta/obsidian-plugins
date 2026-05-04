@@ -65,6 +65,24 @@ export const DEVICE_CONFIGS = {
   },
 };
 
+export const TRANSFORMERS_AUTO_GPU_BATCH_SIZE = 32;
+export const TRANSFORMERS_AUTO_CPU_BATCH_SIZE = 8;
+
+export function get_configured_transformers_batch_size(model) {
+  const configured = Number(model?.data?.batch_size ?? model?.batch_size);
+  if (Number.isFinite(configured) && configured > 1) {
+    return Math.floor(configured);
+  }
+  return null;
+}
+
+export function get_transformers_auto_batch_size(gpu_enabled = false) {
+  return gpu_enabled
+    ? TRANSFORMERS_AUTO_GPU_BATCH_SIZE
+    : TRANSFORMERS_AUTO_CPU_BATCH_SIZE
+  ;
+}
+
 
 const is_webgpu_available = async () => {
   // API exposed?
@@ -182,9 +200,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
    * @returns {number}
    */
   get batch_size() {
-    const configured = this.model.data.batch_size;
-    if (configured && configured > 0) return configured;
-    return this.gpu_enabled ? 16 : 8;
+    return get_configured_transformers_batch_size(this.model)
+      || get_transformers_auto_batch_size(this.gpu_enabled)
+    ;
   }
   get gpu_enabled() {
     if (this.has_gpu) {
@@ -541,6 +559,12 @@ export const transformers_settings_config = {
 
 // 2025-11-26
 export const settings_config = {
+  batch_size: {
+    name: 'Embedding batch size',
+    type: 'number',
+    description: 'Number of notes/blocks embedded per local Transformers batch. Use 0 or 1 for auto. RTX 3090 can usually start at 32 and try 64 if stable.',
+    default: 0,
+  },
   // "legacy_transformers": {
   //   name: 'Legacy transformers (no GPU)',
   //   type: "toggle",
