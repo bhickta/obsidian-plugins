@@ -25,7 +25,7 @@ export function get_notification_event_count(event_logs) {
 export function get_status_bar_state(env) {
   const embed_queue_count = Object.keys(env?.smart_sources?.sources_re_import_queue || {}).length;
   const notification_count = get_notification_event_count(env?.event_logs);
-  const version = env?.is_pro ? 'Pro' : env?.constructor?.version;
+  const version = env?.constructor?.version;
   let message = `Smart Env${version ? ' ' + version : ''}`;
   let title = 'Smart Environment status';
   let indicator_level = null;

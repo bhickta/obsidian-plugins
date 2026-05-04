@@ -50,7 +50,7 @@ export async function post_process(scope_plugin, frag) {
   });
 
   frag.querySelector('.sc-report-bug-button')?.addEventListener('click', () => {
-    new ScProSupportModal(scope_plugin.app).open();
+    new ScSupportModal(scope_plugin.app).open();
   });
 
   frag.querySelector('.sc-request-feature-button')?.addEventListener('click', () => {
@@ -71,14 +71,13 @@ export async function post_process(scope_plugin, frag) {
 }
 
 import { Modal } from 'obsidian';
-// Obsidian Modal that says "Need help and support? Reply to your Pro welcome email for priority support."
-export class ScProSupportModal extends Modal {
+export class ScSupportModal extends Modal {
   open() {
     super.open();
     this.titleEl.setText('Need help and support?');
-    const content = this.contentEl.createDiv({ cls: 'sc-pro-support-modal' });
+    const content = this.contentEl.createDiv({ cls: 'sc-support-modal' });
     content.createEl('p', {
-      text: 'Reply to your Smart Environment Pro welcome email for priority support.',
+      text: 'Open a bug report with the details needed to reproduce the issue.',
     });
     // continue to report a bug button
     const reportBugButton = content.createEl('button', { text: 'Report a bug', cls: 'mod-warning' });

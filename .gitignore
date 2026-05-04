@@ -29,3 +29,4 @@ npm-debug.log*
 _training/
 generate_training_dataset
 __pycache__
+.tokensave

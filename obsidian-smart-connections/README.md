@@ -54,7 +54,7 @@ See Smart Connections (and how it pairs with Smart Chat) in action:
 Access the Getting Started guide from Smart Connections settings.  
 [![Smart Connections Getting Started](/assets/smart-connections-getting-started.gif)](https://smartconnections.app/story/smart-connections-getting-started/?utm_source=connections-readme)
 
-Watch the [feature walkthrough slideshow](https://smartconnections.app/story/smart-connections-getting-started/?utm_source=connections-readme) or read the [Getting Started guide](https://smartconnections.app/smart-connections/getting-started/?utm_source=connections-readme) to see how Smart Connections fits into your workflow, including Connections view, Lookup view, inline Pro features, and Smart Environment settings.
+Watch the [feature walkthrough slideshow](https://smartconnections.app/story/smart-connections-getting-started/?utm_source=connections-readme) or read the [Getting Started guide](https://smartconnections.app/smart-connections/getting-started/?utm_source=connections-readme) to see how Smart Connections fits into your workflow, including Connections view, Lookup view, inline connections, and Smart Environment settings.
 #### Learn more
 
 - [Smart Connections overview](https://smartconnections.app/smart-connections/?utm_source=connections-readme)
@@ -62,10 +62,8 @@ Watch the [feature walkthrough slideshow](https://smartconnections.app/story/sma
 - [Connections list feature](https://smartconnections.app/smart-connections/list-feature/?utm_source=connections-readme)
 - [Lookup view](https://smartconnections.app/smart-connections/lookup/?utm_source=connections-readme)
 - [Settings guide](https://smartconnections.app/smart-connections/settings/?utm_source=connections-readme)
-- [Inline connections (Pro)](https://smartconnections.app/smart-connections/inline/?utm_source=connections-readme)
-- [Bases integration (Pro)](https://smartconnections.app/smart-connections/bases/?utm_source=connections-readme)
-- [Pro plugins overview](https://smartconnections.app/pro-plugins/?utm_source=connections-readme)
-- [Introducing Pro plugins](https://smartconnections.app/introducing-pro-plugins/?utm_source=connections-readme)
+- [Inline connections](https://smartconnections.app/smart-connections/inline/?utm_source=connections-readme)
+- [Bases integration](https://smartconnections.app/smart-connections/bases/?utm_source=connections-readme)
 
 ## Getting started
 ### It "just works"
@@ -153,7 +151,7 @@ Note: the random connection command requires the Connections view to be active.
 
 ## What's new in v4?
 
-Smart Connections v4 focuses the core plugin on a simple promise: install, enable, and AI-powered connections just work. Advanced configuration and power-user workflows now live in Pro plugins. Read [Introducing Pro Plugins](https://smartconnections.app/introducing-pro-plugins/?utm_source=connections-readme) to learn more.
+Smart Connections v4 focuses the plugin on a simple promise: install, enable, and AI-powered connections just work. Advanced configuration and power-user workflows are available through Smart Environment and the Smart Plugins catalog.
 
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Pause connections</span></summary>
 Use the new Connections "pause" button to freeze the connections results. This allows you to move through your vault while keeping the connections to a specific note visible while you work.
@@ -168,15 +166,13 @@ Click the connections view menu button and "Send to Smart Context" (briefcase ic
 </details><br>
 
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Pinned connections</span></summary>
-In addition to "hiding" connections, you can now "Pin" connections. This ensures the pinned connections are always visible in the connections view. **Connections Pro:** *Hidden and pinned connections are used by new connections algorithms (available in Pro) to improve results!*
+In addition to "hiding" connections, you can now "Pin" connections. This ensures the pinned connections are always visible in the connections view, and hidden or pinned state can improve ranking behavior where supported.
 </details><br>
 
-<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Connections Pro</span></summary>
-Connections Pro builds on the core plugin and Smart Environment to give power users more control.
+<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Advanced connections</span></summary>
+Advanced connection tools build on Smart Environment to give power users more control.
 
-![](https://smartconnections.app/assets/connections-view-pro-notes.gif)
-
-Examples of Pro features:
+Advanced features:
 
 - **Inline connections**  
 	Small badges in the editor that show how many strong matches a block has, with a pop-over of related blocks and notes.  
@@ -188,10 +184,10 @@ Examples of Pro features:
 	Use `score_connection` and `list_connections` in Obsidian Bases to show similarity columns and related note lists in tables.  
 - **Advanced filters and models**  
 	Extra Smart Environment controls for embeddings, collections, and include or exclude rules.  
-- **Early release experiments**  
-	New ideas launch in Early channels first so supporters can shape how they evolve.
+- **Experimental workflows**
+	New ideas can launch behind settings first so users can shape how they evolve.
 
-Connections Pro is part of the [Pro plugins](https://smartconnections.app/pro-plugins/?utm_source=connections-readme) family and is available to active project supporters. It is still built on the same open Smart Environment. Supporting Pro helps fund development of all Smart Plugins and the free core.
+These features are built on the same Smart Environment core and are available without paid feature gating.
 </details><br>
 
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Events and notifications</span></summary>
@@ -341,16 +337,14 @@ Here's what some of them have to say:
 
 
 ## FAQs and troubleshooting
-<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Does it work on mobile?</span></summary>Yes, both the Core Smart Connections and Connections Pro are mobile friendly.</details><br>
+<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Does it work on mobile?</span></summary>Yes, Smart Connections is mobile friendly.</details><br>
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Syncthing and third party sync</span></summary>
 Smart Connections works best with Obsidian Sync. If you use a third party sync tool, add the `.smart-env/` directory to its ignore patterns to avoid conflicts.</details><br>
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">Where is Smart Chat?</span></summary>
 
 Smart Chat is no longer bundled inside Smart Connections, as planned in the last major release, it has been moved to its own dedicated plugin. You can now install **Smart Chat** directly from the [Obsidian Community plugins](https://obsidian.md/plugins?id=smart-chatgpt) or learn more [here](https://smartconnections.app/smart-chat/?utm_source=connections-readme).
 
-To keep the **Core Smart Connections plugin** simple and “just works,” all **API‑based model integrations (cloud and local)** have moved into **Smart Chat Pro**, the Pro version of the Smart Chat plugin. This lets advanced model routing and multi‑provider support be maintained sustainably, while the free Smart Plugins stay focused on essential core features that work with third-party interfaces like ChatGPT, Claude and Gemini.
-
-For more about Pro plugins, read [Introducing Pro Plugins](https://smartconnections.app/introducing-pro-plugins/?utm_source=connections-readme).
+API-based model integrations for cloud and local providers are configured through Smart Environment and Smart Chat. Use your own provider credentials for Gemini, Groq, OpenAI-compatible endpoints, Ollama, LM Studio, and other direct providers.
 </details><br>
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">What is the Smart Ecosystem?</span></summary>
 
@@ -358,12 +352,9 @@ Smart Connections is one piece of a larger ecosystem of local first, user aligne
 I build Smart Plugins to explore new ideas, ship practical workflows, and keep complexity manageable inside Obsidian. Smart Connections is the piece that handles the space between notes (connections).
 </details><br>
 
-<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">What are Pro plugins?</span></summary>
+<details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">What are Smart Plugins?</span></summary>
 
-Most AI features need continuous maintenance. As providers and APIs change, deeply configurable options require far more support, testing, and refactoring than simple defaults.
-
-[Introducing Pro plugins](https://smartconnections.app/introducing-pro-plugins/?utm_source=connections-readme): how the project stays sustainable without compromising the open core. Core Smart Plugins remain free and source available. Pro plugins sit on top of that core, built on the same open Smart Environment. They do not remove the essentials from the free plugins; instead they collect advanced options in one place and fund the work needed to maintain them.
-Pro plugins (including Connections Pro) are available to all past project supporters. Not yet a supporter? [Get Pro plugins here](https://smartconnections.app/pro-plugins/?utm_source=connections-readme).
+Smart Plugins are modular Obsidian plugins built on Smart Environment. The shared environment provides models, sources, indexing, notifications, and provider configuration so each plugin can focus on its workflow.
 </details><br>
 
 <details><summary><span style="--font-weight: var(--h3-weight); font-variant: var(--h3-variant); letter-spacing: var(--h3-letter-spacing); line-height: var(--h3-line-height); font-size: var(--h3-size); color: var(--h3-color); font-weight: var(--font-weight); font-style: var(--h3-style); font-family: var(--h3-font); cursor: pointer;">What is Smart Environment?</span></summary>
@@ -380,12 +371,6 @@ In short, Smart Environment aims to be your local-first core: a PKM inspired bac
 </details><br>
 
 ---
-
-## Connections Pro
-
-[![](https://smartconnections.app/assets/connections-view-pro-notes.gif)](https://smartconnections.app/smart-connections/?utm_source=connections-readme)
-
-[Learn more about Connections Pro](https://smartconnections.app/smart-connections/?utm_source=connections-readme).
 
 ## More Smart Plugins
 Quickly assemble many notes into a single prompt or document using context selectors, links, and templates with **Smart Context**. Want to know how I manage thousands of ChatGPT threads from Obsidian? Start a new thread inside of a note and come back to it later with **Smart Chat!**

@@ -38,8 +38,6 @@ export const settings_config = {
     description: 'Wraps the full context with a pre-configured template.',
     options_callback: () => get_template_preset_options(),
     callback(template_value) {
-      const is_pro = this?.env?.is_pro;
-      if (!is_pro) return;
       if (template_value !== 'custom') return;
       this.emit_event('context:custom_template_set');
     },
@@ -49,14 +47,12 @@ export const settings_config = {
     group: 'Context templates',
     name: 'Template Before',
     description: 'Template to wrap before the context.',
-    scope_class: 'pro-setting',
   },
   template_after: {
     type: 'textarea',
     group: 'Context templates',
     name: 'Template After',
     description: 'Template to wrap after the context.',
-    scope_class: 'pro-setting',
   },
   context_explanation: {
     type: 'html',

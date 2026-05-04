@@ -120,7 +120,7 @@ export async function post_process(env, container, params = {}) {
 }
 
 /**
- * @param {{event_key:string, group:string, milestone:string, link:string, is_pro?: boolean}} item
+ * @param {{event_key:string, group:string, milestone:string, link:string}} item
  * @param {{checked:boolean}} state
  * @returns {string}
  */
@@ -141,7 +141,7 @@ function build_item_html(item, state) {
       role="button"
       aria-label="${escape_html(aria_label)}"
     >
-      <div class="sc-events-checklist__label${item.is_pro ? ' pro-milestone' : ''}">
+      <div class="sc-events-checklist__label">
         <span class="sc-events-checklist__icon" aria-hidden="true"></span>
         <span class="sc-events-checklist__milestone">${escape_html(item.milestone)}</span>
       </div>

@@ -2,23 +2,11 @@ const PLUGIN_INSTALL_EVENT_CONFIG = {
   'connections:installed': {
     ids: ['smart-connections'],
   },
-  'connections_pro:installed': {
-    ids: ['smart-connections'],
-    require_pro_name: true,
-  },
   'context:installed': {
     ids: ['smart-context'],
   },
-  'context_pro:installed': {
-    ids: ['smart-context'],
-    require_pro_name: true,
-  },
   'chat:installed': {
     ids: ['smart-chatgpt', 'smart-chat'],
-  },
-  'chat_pro:installed': {
-    ids: ['smart-chat'],
-    require_pro_name: true,
   },
 };
 
@@ -29,9 +17,8 @@ const PLUGIN_INSTALL_EVENT_CONFIG = {
  *  - group: relevant plugin/feature set
  *  - milestone: description of the result achieved by emitting the event
  *  - link: SmartConnections.app docs link for the milestone
- *  - is_pro: whether the milestone is Pro-only (adds badge in UI)
  *
- * @type {Record<string, {group: string, milestone: string, link: string, is_pro?: boolean}>}
+ * @type {Record<string, {group: string, milestone: string, link: string}>}
  */
 export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   // Environment
@@ -98,14 +85,6 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#manage-noise',
   },
 
-  // Connections Pro
-  'connections_pro:installed': {
-    group: 'Connections Pro',
-    milestone: 'Installed Smart Connections Pro.',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#connections-pro',
-    is_pro: true,
-  },
-
   // Lookup
   'lookup:hover_preview': {
     group: 'Lookup',
@@ -165,30 +144,19 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones',
   },
   'context:copied_with_media': {
-    group: 'Context Pro',
+    group: 'Context',
     milestone: 'Copied context with media (images/PDF pages) for multimodal workflows.',
     link: 'https://smartconnections.app/smart-context/clipboard/?utm_source=milestones#copy-modes',
-    is_pro: true,
   },
   'context:custom_template_set': {
-    group: 'Context Pro',
+    group: 'Context',
     milestone: 'Set a custom context template.',
     link: 'https://smartconnections.app/smart-context/settings/?utm_source=milestones#context-templates',
-    is_pro: true,
   },
   'context_item:custom_template_set': {
-    group: 'Context Pro',
+    group: 'Context',
     milestone: 'Set a custom context item template.',
     link: 'https://smartconnections.app/smart-context/settings/?utm_source=milestones#item-templates',
-    is_pro: true,
-  },
-
-  // Context Pro
-  'context_pro:installed': {
-    group: 'Context Pro',
-    milestone: 'Installed Smart Context Pro.',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#context-pro',
-    is_pro: true,
   },
 
   // Chat
@@ -213,72 +181,40 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#chat-inbox',
   },
 
-  // Chat Pro
-  'chat_pro:installed': {
-    group: 'Chat Pro',
-    milestone: 'Installed Smart Chat Pro.',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#chat-pro',
-    is_pro: true,
-  },
   'completion:completed': {
-    group: 'Chat Pro',
+    group: 'Chat',
     milestone: 'Received the first Smart Chat response (a completion finished).',
     link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
-    is_pro: true,
   },
 
-  // Connections Pro (Inline Connections)
+  // Inline Connections
   'inline_connections:show': {
-    group: 'Connections Pro',
+    group: 'Connections',
     milestone: 'Opened inline connections in-note (used the inline workflow).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
-    is_pro: true,
   },
   'inline_connections:open_result': {
-    group: 'Connections Pro',
+    group: 'Connections',
     milestone: 'Opened an inline connections result (navigated from discovery to source).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
-    is_pro: true,
   },
   'inline_connections:drag_result': {
-    group: 'Connections Pro',
+    group: 'Connections',
     milestone: 'Inserted an inline link from an inline connection (converted discovery into a durable link).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
-    is_pro: true,
   },
 
 
-  // Connect Pro
-  'connect_pro:ping': {
-    group: 'Connect Pro',
-    milestone: 'Connect Pro ping observed (local route hit or tunnel health check ran).',
-    link: 'https://smartconnections.app/connect-pro/?utm_source=milestones#health-check',
-    is_pro: true,
+  // Connect
+  'connect:ping': {
+    group: 'Connect',
+    milestone: 'Connect ping observed (local route hit or tunnel health check ran).',
+    link: 'https://smartconnections.app/smart-connections/?utm_source=milestones#health-check',
   },
-  'connect_pro:request': {
-    group: 'Connect Pro',
-    milestone: 'Connect Pro request received (remote action hit /obsidian-cli).',
-    link: 'https://smartconnections.app/connect-pro/?utm_source=milestones#request-flow',
-    is_pro: true,
-  },
-
-  // Pro
-  'smart_plugins_oauth_completed': {
-    group: 'Pro',
-    milestone: 'Connected account (enabled Pro plugins).',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones',
-  },
-  'referrals:copied_link': {
-    group: 'Pro',
-    milestone: 'Copied your referral link to share Pro.',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#referrals',
-    is_pro: true,
-  },
-  'referrals:opened_dashboard': {
-    group: 'Pro',
-    milestone: 'Opened the referrals dashboard to view bonuses.',
-    link: 'https://smartconnections.app/my-referrals/?utm_source=milestones',
-    is_pro: true,
+  'connect:request': {
+    group: 'Connect',
+    milestone: 'Connect request received (remote action hit /obsidian-cli).',
+    link: 'https://smartconnections.app/smart-connections/?utm_source=milestones#request-flow',
   },
 };
 
@@ -293,17 +229,13 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
   'Lookup',
   'Context',
   'Chat',
-  'Connections Pro',
-  'Context Pro',
-  'Chat Pro',
-  'Connect Pro',
-  'Pro',
+  'Connect',
 ];
 
 /**
  * Convert the checklist map into an ordered array of groups with ordered items.
- * @param {Record<string, {group: string, milestone: string, link: string, is_pro?: boolean}>} items_by_event_key
- * @returns {Array<{group: string, items: Array<{event_key: string, group: string, milestone: string, link: string, is_pro?: boolean}>}>}
+ * @param {Record<string, {group: string, milestone: string, link: string}>} items_by_event_key
+ * @returns {Array<{group: string, items: Array<{event_key: string, group: string, milestone: string, link: string}>}>}
  */
 export function derive_events_checklist_groups(items_by_event_key) {
   const group_map = Object.entries(items_by_event_key || {}).reduce((acc, [event_key, item]) => {
@@ -311,7 +243,7 @@ export function derive_events_checklist_groups(items_by_event_key) {
     if (!acc[group]) acc[group] = [];
     acc[group].push({ event_key, group, milestone: item?.milestone || '', ...item });
     return acc;
-  }, /** @type {Record<string, Array<{event_key: string, group: string, milestone: string, link: string, is_pro?: boolean}>>} */ ({}));
+  }, /** @type {Record<string, Array<{event_key: string, group: string, milestone: string, link: string}>>} */ ({}));
 
   const all_groups = Object.keys(group_map);
   const order_index = EVENTS_CHECKLIST_GROUP_ORDER.reduce((acc, name, idx) => {
@@ -358,15 +290,8 @@ function resolve_plugin_install_event(env, event_key) {
   for (const plugin_id of plugin_ids) {
     const manifest = manifests[plugin_id];
     if (!manifest) continue;
-    if (config.require_pro_name && !is_pro_manifest(manifest)) continue;
     return true;
   }
 
   return false;
-}
-
-function is_pro_manifest(manifest) {
-  const name = manifest?.name;
-  if (typeof name !== 'string') return false;
-  return name.toLowerCase().includes('pro');
 }

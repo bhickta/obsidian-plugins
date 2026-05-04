@@ -14,11 +14,8 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     this.plugin_container = null;
     this.global_settings_container = null;
     this.plugin?.env?.create_env_getter?.(this);
-    if(this.env.is_pro && !this.env_settings_tab) this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
+    if(!this.env_settings_tab) this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
     this.icon = 'smart-connections';
-    if (this.env.is_pro) {
-      this.name = this.name.replace('Smart ', '');
-    }
   }
   get smart_view() {
     return this.env?.smart_view;
@@ -45,7 +42,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     this.header_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-header' });
     this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-main' });
     this.global_settings_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-env' });
-    this.pro_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-pro-plugins' });
+    this.plugins_catalog_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-plugins-catalog' });
   }
 
   /**
@@ -65,7 +62,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (!container) return;
     container.empty?.();
     if (!this.env) return;
-    if(this.env.is_pro) {
+    if(this.env_settings_tab) {
       const settings_item_div = container.createDiv({ cls: 'setting-item' });
       const info_div = settings_item_div.createDiv({ cls: 'setting-item-info' });
       info_div.createDiv({ cls: 'setting-item-name', text: 'Smart Environment' });
@@ -82,9 +79,9 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
       const settings_smart_env = await this.render_component('settings_smart_env', this.env);
       if (settings_smart_env) container.appendChild(settings_smart_env);
     }
-    const smart_plugins_settings = await this.render_component('pro_plugins_list', this.env);
-    this.pro_plugins_container.empty?.();
-    this.pro_plugins_container.appendChild(smart_plugins_settings);
+    const smart_plugins_settings = await this.render_component('plugin_catalog_list', this.env);
+    this.plugins_catalog_container.empty?.();
+    this.plugins_catalog_container.appendChild(smart_plugins_settings);
   }
 
   async render_component(name, scope, params={}) {
@@ -107,7 +104,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.global_settings_container = null;
     this.plugin?.env?.create_env_getter?.(this);
     this.plugin = plugin;
-    this.name = 'Smart Env Pro';
+    this.name = 'Smart Env';
     this.id = 'smart-environment';
     this.icon = 'smart-connections';
   }
@@ -129,13 +126,13 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.containerEl.empty();
     this.header_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-header' });
     this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-main' });
-    this.pro_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-pro-plugins' });
+    this.plugins_catalog_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-plugins-catalog' });
     this.header_container.createEl('p', { text: 'Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.' });
     const settings_smart_env = await this.render_component('settings_smart_env', this.env);
     if (settings_smart_env) this.plugin_container.appendChild(settings_smart_env);
-    const smart_plugins_settings = await this.render_component('pro_plugins_list', this.env);
-    this.pro_plugins_container.empty?.();
-    this.pro_plugins_container.appendChild(smart_plugins_settings);
+    const smart_plugins_settings = await this.render_component('plugin_catalog_list', this.env);
+    this.plugins_catalog_container.empty?.();
+    this.plugins_catalog_container.appendChild(smart_plugins_settings);
   }
 
 }

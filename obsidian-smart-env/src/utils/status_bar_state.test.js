@@ -22,7 +22,6 @@ test('get_notification_event_count counts only notification events', (t) => {
 
 test('get_status_bar_state prioritizes embed queue message', (t) => {
   const env = {
-    is_pro: false,
     constructor: { version: '1.2.3' },
     smart_sources: { sources_re_import_queue: { a: true, b: true } },
     event_logs: { session_events: [], notification_status: 'warning' },
@@ -38,7 +37,6 @@ test('get_status_bar_state prioritizes embed queue message', (t) => {
 
 test('get_status_bar_state uses notification count when no embed queue', (t) => {
   const env = {
-    is_pro: true,
     constructor: { version: '9.9.9' },
     smart_sources: { sources_re_import_queue: {} },
     event_logs: {
@@ -52,7 +50,7 @@ test('get_status_bar_state uses notification count when no embed queue', (t) => 
 
   const state = get_status_bar_state(env);
 
-  t.is(state.message, 'Smart Env Pro');
+  t.is(state.message, 'Smart Env 9.9.9');
   t.is(state.title, 'Smart Environment status');
   t.is(state.indicator_count, 2);
   t.is(state.indicator_level, 'warning');

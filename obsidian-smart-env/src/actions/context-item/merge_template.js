@@ -66,8 +66,6 @@ export const settings_config = {
     description: 'Wraps each context item with a pre-configured template.',
     options_callback: () => get_template_preset_options(),
     callback(template_value) {
-      const is_pro = this?.env?.is_pro;
-      if (!is_pro) return;
       if (template_value !== 'custom') return;
       this.emit_event('context_item:custom_template_set');
     },
@@ -77,14 +75,12 @@ export const settings_config = {
     type: 'textarea',
     name: 'Template Before',
     description: 'Template to wrap before the context item content.',
-    scope_class: 'pro-setting',
   },
   template_after: {
     group: 'Item templates',
     type: 'textarea',
     name: 'Template After',
     description: 'Template to wrap after the context item content.',
-    scope_class: 'pro-setting',
   },
   item_explanation: {
     type: 'html',
@@ -105,7 +101,6 @@ export const settings_config = {
     type: 'toggle',
     name: 'JSON Stringify',
     description: 'Convert the item content to a JSON string (forces full content into single line in quotes).',
-    scope_class: 'pro-setting',
   }
 };
 

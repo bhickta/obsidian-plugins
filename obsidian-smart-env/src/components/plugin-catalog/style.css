@@ -1,0 +1,23 @@
+.plugins-catalog-list {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--size-4-3);
+  margin-top: var(--size-5);
+}
+
+.plugins-catalog-list-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75em 0;
+  border-top: 1px solid var(--background-modifier-border);
+  row-gap: var(--size-4-3);
+}
+
+.plugins-catalog-container > .setting-group {
+  .setting-item-name.plugins-catalog-heading {
+    font-size: var(--h1-size);
+  }
+  &> p {
+    padding: 0 var(--size-4-4);
+  }
+}

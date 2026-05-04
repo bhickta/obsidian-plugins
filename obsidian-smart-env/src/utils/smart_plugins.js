@@ -1,15 +1,10 @@
-import { requestUrl } from 'obsidian';
+const ZIP_LOCAL_FILE_HEADER_SIG = 0x04034b50;
+const ZIP_CENTRAL_DIRECTORY_SIG = 0x02014b50;
+const ZIP_DATA_DESCRIPTOR_SIG = 0x08074b50;
+const PLUGIN_FOLDER_ROOT = '.obsidian/plugins';
 
-/**
- * If the user or test code sets window.SMART_SERVER_URL_OVERRIDE,
- * we use that as the base URL. Otherwise, default to production.
- * @returns {string}
- */
-export function get_smart_server_url() {
-  if (typeof window !== 'undefined' && window.SMART_SERVER_URL_OVERRIDE) {
-    return window.SMART_SERVER_URL_OVERRIDE;
-  }
-  return 'https://connect.smartconnections.app';
+function default_request_url() {
+  throw new Error('fetch_zip_from_url requires an Obsidian request function.');
 }
 
 /**
@@ -17,7 +12,7 @@ export function get_smart_server_url() {
  * @returns {any|null}
  */
 export function try_get_zlib() {
-  if (typeof window?.require === 'function') {
+  if (typeof window !== 'undefined' && typeof window.require === 'function') {
     try {
       return window.require('zlib');
     } catch {}
@@ -42,6 +37,106 @@ export function inflate_deflate_data(compressed) {
 }
 
 /**
+ * Keep plugin folder names compatible with Obsidian adapter paths.
+ *
+ * @param {unknown} value
+ * @param {string} [fallback]
+ * @returns {string}
+ */
+export function sanitize_plugin_id(value, fallback = 'smart-plugin') {
+  const safe = String(value || fallback)
+    .trim()
+    .replace(/[\\/]+/g, '_')
+    .replace(/[^\w-]/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return safe || fallback;
+}
+
+/**
+ * Convert an adapter path to a predictable slash-separated path.
+ *
+ * @param {...string} parts
+ * @returns {string}
+ */
+export function join_adapter_path(...parts) {
+  return parts
+    .filter((part) => part !== undefined && part !== null && String(part).length > 0)
+    .map((part) => String(part).replace(/\\/g, '/'))
+    .join('/')
+    .replace(/\/+/g, '/')
+    .replace(/\/$/, '');
+}
+
+/**
+ * Normalize a ZIP entry path and reject entries that would escape the plugin
+ * folder when written to the vault adapter.
+ *
+ * @param {string} file_name
+ * @returns {string}
+ */
+export function normalize_zip_file_path(file_name) {
+  const normalized = String(file_name || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+  const parts = [];
+  for (const part of normalized.split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      throw new Error(`Unsafe ZIP entry path: ${file_name}`);
+    }
+    parts.push(part);
+  }
+  return parts.join('/');
+}
+
+/**
+ * GitHub release zips often wrap files in a single root folder. Strip that
+ * folder only when it contains the plugin manifest.
+ *
+ * @param {{fileName:string, data:Uint8Array}[]} files
+ * @returns {{fileName:string, data:Uint8Array}[]}
+ */
+export function strip_common_archive_root(files) {
+  if (!files.length) return files;
+  if (files.some(({ fileName }) => fileName === 'manifest.json')) return files;
+
+  const first_parts = files[0].fileName.split('/');
+  if (first_parts.length < 2) return files;
+  const root = first_parts[0];
+  const has_common_root = files.every(({ fileName }) => fileName.startsWith(root + '/'));
+  const has_manifest_under_root = files.some(({ fileName }) => fileName === `${root}/manifest.json`);
+  if (!has_common_root || !has_manifest_under_root) return files;
+
+  return files
+    .map(({ fileName, data }) => ({
+      fileName: fileName.slice(root.length + 1),
+      data,
+    }))
+    .filter(({ fileName }) => fileName.length > 0);
+}
+
+function normalize_archive_files(files) {
+  const normalized_files = [];
+  for (const { fileName, data } of files) {
+    if (String(fileName || '').endsWith('/')) continue;
+    const safe_file_name = normalize_zip_file_path(fileName);
+    if (!safe_file_name) continue;
+    normalized_files.push({ fileName: safe_file_name, data });
+  }
+  return strip_common_archive_root(normalized_files);
+}
+
+function parse_plugin_manifest(files) {
+  const manifest_file = files.find(({ fileName }) => fileName === 'manifest.json');
+  if (!manifest_file) return null;
+  try {
+    return JSON.parse(new TextDecoder('utf-8').decode(manifest_file.data));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Minimal ZIP parser that handles bit 3 data descriptor for local file headers.
  * Returns { files, pluginManifest } where:
  *  - files is an array of { fileName, data }
@@ -55,15 +150,14 @@ export async function parse_zip_into_files(zipBuffer) {
   let offset = 0;
   const length = dv.byteLength;
   const files = [];
-  let pluginManifest = null;
 
   while (offset + 4 <= length) {
     // local file header signature => 0x04034b50
     const localSig = dv.getUint32(offset, true);
-    if (localSig === 0x02014b50 || localSig === 0x08074b50) {
+    if (localSig === ZIP_CENTRAL_DIRECTORY_SIG || localSig === ZIP_DATA_DESCRIPTOR_SIG) {
       break;
     }
-    if (localSig !== 0x04034b50) {
+    if (localSig !== ZIP_LOCAL_FILE_HEADER_SIG) {
       break;
     }
     offset += 4;
@@ -107,9 +201,9 @@ export async function parse_zip_into_files(zipBuffer) {
       while (scanPos + 4 <= length) {
         const sig = dv.getUint32(scanPos, true);
         if (
-          sig === 0x08074b50 ||
-          sig === 0x04034b50 ||
-          sig === 0x02014b50
+          sig === ZIP_DATA_DESCRIPTOR_SIG ||
+          sig === ZIP_LOCAL_FILE_HEADER_SIG ||
+          sig === ZIP_CENTRAL_DIRECTORY_SIG
         ) {
           foundSig = true;
           break;
@@ -129,7 +223,7 @@ export async function parse_zip_into_files(zipBuffer) {
     if (hasDataDescriptor) {
       if (offset + 4 <= length) {
         const ddSig = dv.getUint32(offset, true);
-        if (ddSig === 0x08074b50) {
+        if (ddSig === ZIP_DATA_DESCRIPTOR_SIG) {
           offset += 4;
         }
         if (offset + 12 <= length) {
@@ -155,16 +249,13 @@ export async function parse_zip_into_files(zipBuffer) {
     }
 
     files.push({ fileName, data: rawData });
-
-    // check if it's top-level manifest.json
-    if (fileName.toLowerCase().endsWith('manifest.json') && !fileName.includes('/')) {
-      try {
-        pluginManifest = JSON.parse(new TextDecoder('utf-8').decode(rawData));
-      } catch {}
-    }
   }
 
-  return { files, pluginManifest };
+  const normalized_files = normalize_archive_files(files);
+  return {
+    files: normalized_files,
+    pluginManifest: parse_plugin_manifest(normalized_files),
+  };
 }
 
 /**
@@ -179,11 +270,32 @@ export function validate_zip_buffer(zip_buffer, source_label = 'Response') {
     throw new Error(`${source_label} returned too few bytes, not a valid ZIP.`);
   }
   const dv = new DataView(zip_buffer);
-  if (dv.getUint32(0, true) !== 0x04034b50) {
+  if (dv.getUint32(0, true) !== ZIP_LOCAL_FILE_HEADER_SIG) {
     const txt = new TextDecoder().decode(new Uint8Array(zip_buffer));
     throw new Error(`${source_label} did not return a valid ZIP. Text:\n${txt}`);
   }
   return zip_buffer;
+}
+
+async function ensure_adapter_folder(adapter, folder_path) {
+  if (!adapter?.exists || !adapter?.mkdir) return;
+  const parts = join_adapter_path(folder_path).split('/').filter(Boolean);
+  let current_path = '';
+  for (const part of parts) {
+    current_path = current_path ? `${current_path}/${part}` : part;
+    if (!(await adapter.exists(current_path))) {
+      await adapter.mkdir(current_path);
+    }
+  }
+}
+
+function bytes_to_base64(data) {
+  let binary = '';
+  const chunk_size = 0x8000;
+  for (let i = 0; i < data.length; i += chunk_size) {
+    binary += String.fromCharCode(...data.subarray(i, i + chunk_size));
+  }
+  return btoa(binary);
 }
 
 /**
@@ -194,18 +306,112 @@ export function validate_zip_buffer(zip_buffer, source_label = 'Response') {
  */
 export async function write_files_with_adapter(adapter, baseFolder, files) {
   const hasWriteBinary = typeof adapter.writeBinary === 'function';
-  if (!(await adapter.exists(baseFolder))) {
-    await adapter.mkdir(baseFolder);
-  }
+  await ensure_adapter_folder(adapter, baseFolder);
   for (const { fileName, data } of files) {
-    const fullPath = baseFolder + '/' + fileName;
+    const safe_file_name = normalize_zip_file_path(fileName);
+    if (!safe_file_name) continue;
+    const fullPath = join_adapter_path(baseFolder, safe_file_name);
+    const parent_folder = fullPath.split('/').slice(0, -1).join('/');
+    if (parent_folder) {
+      await ensure_adapter_folder(adapter, parent_folder);
+    }
     if (hasWriteBinary) {
       await adapter.writeBinary(fullPath, data);
     } else {
-      const base64 = btoa(String.fromCharCode(...data));
-      await adapter.write(fullPath, base64);
+      await adapter.write(fullPath, bytes_to_base64(data));
     }
   }
+}
+
+/**
+ * Resolve the Obsidian plugin id and folder name from server metadata and the
+ * downloaded manifest.
+ *
+ * @param {object} params
+ * @param {object} [params.item]
+ * @param {object} [params.plugin_manifest]
+ * @param {string} [params.fallback_plugin_id]
+ * @returns {{plugin_id:string, folder_name:string}}
+ */
+export function resolve_plugin_install_target({
+  item = {},
+  plugin_manifest = null,
+  fallback_plugin_id = 'smart-plugin',
+} = {}) {
+  const repo_name = String(item.repo || '').replace(/[\\/]+/g, '_');
+  const manifest_id = plugin_manifest?.id || '';
+  const folder_name = sanitize_plugin_id(
+    item.plugin_id || manifest_id || item.manifest_id || repo_name,
+    fallback_plugin_id
+  );
+  const plugin_id = sanitize_plugin_id(
+    manifest_id || item.manifest_id || item.plugin_id || repo_name || folder_name,
+    folder_name
+  );
+  return { plugin_id, folder_name };
+}
+
+/**
+ * Build the vault adapter path for an installed plugin folder.
+ *
+ * @param {string} folder_name
+ * @param {string} [config_dir]
+ * @returns {string}
+ */
+export function build_plugin_folder_path(folder_name, config_dir = PLUGIN_FOLDER_ROOT.split('/')[0]) {
+  return join_adapter_path(config_dir, 'plugins', sanitize_plugin_id(folder_name));
+}
+
+function resolve_loaded_plugin_id(app, plugin_id, folder_name) {
+  const manifests = app?.plugins?.manifests || {};
+  if (manifests[plugin_id]) return plugin_id;
+  if (manifests[folder_name]) return folder_name;
+  return plugin_id;
+}
+
+/**
+ * Install a downloaded plugin ZIP into the vault and enable it.
+ *
+ * @param {import('obsidian').App} app
+ * @param {ArrayBuffer} zip_buffer
+ * @param {object} [options]
+ * @param {object} [options.item]
+ * @param {string} [options.fallback_plugin_id]
+ * @returns {Promise<{plugin_id:string, folder_name:string, base_folder:string, pluginManifest:any, files:{fileName:string,data:Uint8Array}[]}>}
+ */
+export async function install_plugin_from_zip(app, zip_buffer, options = {}) {
+  if (!app?.vault?.adapter) {
+    throw new Error('Cannot install plugin without an Obsidian vault adapter.');
+  }
+
+  const { files, pluginManifest } = await parse_zip_into_files(zip_buffer);
+  if (!files.length) {
+    throw new Error('Plugin ZIP did not contain any installable files.');
+  }
+
+  const { plugin_id, folder_name } = resolve_plugin_install_target({
+    item: options.item || {},
+    plugin_manifest: pluginManifest,
+    fallback_plugin_id: options.fallback_plugin_id,
+  });
+  const base_folder = build_plugin_folder_path(folder_name, app.vault.configDir || '.obsidian');
+
+  await write_files_with_adapter(app.vault.adapter, base_folder, files);
+  await app.plugins.loadManifests?.();
+
+  const loaded_plugin_id = resolve_loaded_plugin_id(app, plugin_id, folder_name);
+  if (app.plugins.enabledPlugins?.has?.(loaded_plugin_id)) {
+    await app.plugins.disablePlugin?.(loaded_plugin_id);
+  }
+  await enable_plugin(app, loaded_plugin_id);
+
+  return {
+    plugin_id: loaded_plugin_id,
+    folder_name,
+    base_folder,
+    pluginManifest,
+    files,
+  };
 }
 
 /**
@@ -231,38 +437,13 @@ export function is_server_version_newer(localVer, serverVer) {
 }
 
 /**
- * Calls server /plugin_download to get the zip ArrayBuffer.
- * Used by main.js or any consumer that needs the plugin .zip.
- *
- * @param {string} repoName
- * @param {string} token
- * @returns {Promise<ArrayBuffer>}
- */
-export async function fetch_plugin_zip(repoName, token) {
-  const resp = await requestUrl({
-    url: `${get_smart_server_url()}/plugin_download`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ repo: repoName }),
-  });
-  if (resp.status !== 200) {
-    throw new Error(`plugin_download error ${resp.status}: ${resp.text}`);
-  }
-
-  return validate_zip_buffer(resp.arrayBuffer, 'Smart Plugins server');
-}
-
-/**
  * Fetch a plugin zip from an arbitrary URL (e.g., GitHub releases).
  *
  * @param {string} download_url
  * @param {Function} request_fn
  * @returns {Promise<ArrayBuffer>}
  */
-export async function fetch_zip_from_url(download_url, request_fn = requestUrl) {
+export async function fetch_zip_from_url(download_url, request_fn = default_request_url) {
   console.log(`[smart_plugins] download plugin from URL: ${download_url}`);
   const resp = await request_fn({
     url: download_url,
@@ -275,30 +456,6 @@ export async function fetch_zip_from_url(download_url, request_fn = requestUrl) 
   }
 
   return validate_zip_buffer(resp.arrayBuffer, 'Download');
-}
-
-/**
- * Fetch README markdown from Smart Server.
- *
- * @param {string} repo
- * @param {string} token
- * @param {Function} request_fn
- * @returns {Promise<string>}
- */
-export async function fetch_plugin_readme(repo, token, request_fn = requestUrl) {
-  const resp = await request_fn({
-    url: `${get_smart_server_url()}/plugin_readme`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ repo }),
-  });
-  if (resp.status !== 200) {
-    throw new Error(`plugin_readme error ${resp.status}: ${resp.text}`);
-  }
-  return resp.json.readme;
 }
 
 /**
@@ -315,68 +472,11 @@ export async function fetch_plugin_readme(repo, token, request_fn = requestUrl) 
  * @returns {Promise<void>}
  */
 export async function enable_plugin(app, plugin_id) {
+  if (!plugin_id) {
+    throw new Error('Cannot enable plugin without a plugin id.');
+  }
   await app.plugins.enablePlugin(plugin_id);
-  app.plugins.enabledPlugins.add(plugin_id);
-  app.plugins.requestSaveConfig();
-  app.plugins.loadManifests();
-}
-
-/**
- * Compute the Smart Plugins OAuth storage prefix based on the vault name.
- *
- *   `${vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_smart_plugins_oauth_`
- *
- * @param {import('obsidian').App} app
- * @returns {string}
- */
-export function get_oauth_storage_prefix(app) {
-  const vault_name = app?.vault?.getName?.() || '';
-  const safe = vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  return `${safe}_smart_plugins_oauth_`;
-}
-
-export async function fetch_server_plugin_list(token) {
-  const resp = await requestUrl({
-    url: `${get_smart_server_url()}/plugin_list`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({}),
-  });
-
-  if (resp.status !== 200) {
-    throw new Error(`plugin_list error ${resp.status}: ${resp.text}`);
-  }
-  return resp.json;
-}
-
-/**
- * Fetch referral stats for the authenticated user.
- *
- * @param {object} params
- * @param {string} params.token
- * @returns {Promise<object>}
- */
-export async function fetch_referral_stats(params = {}) {
-  const token = String(params.token || '').trim();
-  if (!token) return { ok: false, error: 'missing_token' };
-
-  const resp = await requestUrl({
-    url: `${get_smart_server_url()}/api/referrals/stats`,
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    }
-  });
-
-  if (resp.status === 401) {
-    return { ok: false, unauthorized: true };
-  }
-  if (resp.status !== 200) {
-    throw new Error(`referrals stats error ${resp.status}: ${resp.text}`);
-  }
-
-  return resp.json;
+  app.plugins.enabledPlugins?.add?.(plugin_id);
+  await app.plugins.requestSaveConfig?.();
+  await app.plugins.loadManifests?.();
 }

@@ -1,7 +1,6 @@
 import {
   Notice,
   Platform,
-  TFile,
 } from 'obsidian';
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
@@ -13,7 +12,6 @@ import {
   add_smart_lookup_icon,
 } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
-import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
@@ -48,12 +46,6 @@ export class SmartEnv extends BaseSmartEnv {
 
   async load(force_load = false) {
     this.run_migrations();
-    if(!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
-      // Register protocol handler for obsidian://smart-plugins/callback
-      this.plugin.registerObsidianProtocolHandler("smart-plugins/callback", async (params) => {
-        await this.handle_smart_plugins_oauth_callback(params);
-      });
-    }
     if(Platform.isMobile && !force_load){
       // create doc frag with a button to run load_env
       const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
@@ -166,41 +158,6 @@ export class SmartEnv extends BaseSmartEnv {
     return this._notices;
   }
 
-  // Smart Plugins
-  /**
-   * This is the function that is called by the new "Sign in with Smart Plugins" button.
-   * @deprecated 2025-12-13 moved to components/pro-plugins/list.js
-   * It replicates the old 'initiate_oauth()' logic from sc_settings_tab.js
-   */
-  initiate_smart_plugins_oauth() {
-    console.log("initiate_smart_plugins_oauth");
-    const state = Math.random().toString(36).slice(2);
-    const redirect_uri = encodeURIComponent("obsidian://smart-plugins/callback");
-    const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
-    window.open(url, '_external');
-    return url;
-  }
-
-  /**
-   * Handles the OAuth callback from the Smart Plugins server.
-   * @param {Object} params - The URL parameters from the OAuth callback.
-   */
-  async handle_smart_plugins_oauth_callback(params) {
-    const code = params.code;
-    if (!code) {
-      new Notice("No OAuth code provided in URL. Login failed.");
-      return;
-    }
-    try {
-      // your existing OAuth + plugin install logic
-      await exchange_code_for_tokens(code, this.plugin);
-      this.events.emit('smart_plugins_oauth_completed');
-    } catch (err) {
-      console.error("OAuth callback error", err);
-      new Notice(`OAuth callback error: ${err.message}`);
-    }
-  }
-
   /**
    * Serializes the environment and, when in a browser, triggers a download.
    * @param {string} [filename='smart_env.json']
@@ -267,13 +224,6 @@ export class SmartEnv extends BaseSmartEnv {
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-grok'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-aistudio'] });
   }
-}
-
-async function disable_plugin(app, plugin_id) {
-  console.log('disabling plugin ' + plugin_id);
-  await app.plugins.unloadPlugin(plugin_id);
-  await app.plugins.disablePluginAndSave(plugin_id);
-  await app.plugins.loadManifests();
 }
 
 /**

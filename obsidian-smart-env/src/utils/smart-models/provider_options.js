@@ -5,54 +5,48 @@ export const provider_options = {
       value: 'open_router',
     },
     {
-      label: 'PRO: LM Studio (local, requires LM Studio app)',
+      label: 'LM Studio (local, requires LM Studio app)',
       value: 'lm_studio',
-      disabled: true,
     },
     {
-      label: 'PRO: Ollama (local, requires Ollama app)',
+      label: 'Ollama (local, requires Ollama app)',
       value: 'ollama',
-      disabled: true,
     },
     {
-      label: 'PRO: OpenAI (cloud)',
+      label: 'OpenAI (cloud)',
       value: 'openai',
-      disabled: true,
     },
     {
-      label: 'PRO: Google Gemini (cloud)',
+      label: 'Google Gemini (cloud)',
       value: 'google',
-      disabled: true,
     },
     {
-      label: 'PRO: Cohere (cloud)',
+      label: 'Cohere (cloud)',
       value: 'cohere',
-      disabled: true,
     },
     {
-      label: 'PRO: xAI Grok (cloud)',
+      label: 'Groq (cloud)',
+      value: 'groq',
+    },
+    {
+      label: 'xAI Grok (cloud)',
       value: 'xai',
-      disabled: true,
     },
     {
-      label: 'PRO: Anthropic Claude (cloud)',
+      label: 'Anthropic Claude (cloud)',
       value: 'anthropic',
-      disabled: true,
     },
     {
-      label: 'PRO: Deepseek (cloud)',
+      label: 'Deepseek (cloud)',
       value: 'deepseek',
-      disabled: true,
     },
     {
-      label: 'PRO: Azure OpenAI (cloud)',
+      label: 'Azure OpenAI (cloud)',
       value: 'azure',
-      disabled: true,
     },
     {
       label: 'Experimental: Lite LLM (self-hosted proxy)',
       value: 'litellm',
-      disabled: true,
     }
   ],
   embedding_models: [
@@ -61,36 +55,30 @@ export const provider_options = {
       value: 'transformers',
     },
     {
-      label: 'PRO: LM Studio (local, requires LM Studio app)',
+      label: 'LM Studio (local, requires LM Studio app)',
       value: 'lm_studio',
-      disabled: true,
     },
     {
-      label: 'PRO: Ollama (local, requires Ollama app)',
+      label: 'Ollama (local, requires Ollama app)',
       value: 'ollama',
-      disabled: true,
     },
     {
-      label: 'PRO: OpenAI (cloud)',
+      label: 'OpenAI (cloud)',
       value: 'openai',
-      disabled: true,
     },
     {
-      label: 'PRO: Google Gemini (cloud)',
+      label: 'Google Gemini (cloud)',
       value: 'gemini',
-      disabled: true,
     },
     {
-      label: 'PRO: Open Router (cloud)',
+      label: 'Open Router (cloud)',
       value: 'open_router',
-      disabled: true,
     },
   ],
   ranking_models: [
     {
-      label: 'PRO: Cohere (cloud)',
+      label: 'Cohere (cloud)',
       value: 'cohere',
-      disabled: true,
     },
   ],
 };

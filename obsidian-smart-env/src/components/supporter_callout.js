@@ -13,44 +13,20 @@ export function build_html(plugin, opts={}) {
             <path d="M12 8h.01"></path>
           </svg>
         </div>
-        <div class="callout-title-inner"><strong>Become a Supporter</strong></div>
+        <div class="callout-title-inner"><strong>Support Smart Plugins</strong></div>
       </div>
       <div class="callout-content">
-        <p>Try early &amp; experimental features:
+        <p>All Smart Plugin features are available without a paid unlock. Contributions help maintain direct provider integrations, documentation, and compatibility with Obsidian releases.</p>
+        <p>Supporter community benefits:
           <ul>
-            <li><b>Smart Connections Early Release:</b>
-              <ul>
-                <li>Inline block connections</li>
-                <li>Footer connections view</li>
-                <li>Connections re-ranking</li>
-              </ul>
-            </li>
-            <li><b>Smart Context Early Release:</b>
-              <ul>
-                <li>Named contexts</li>
-                <li>External sources: include code from external repositories</li>
-                <li>Context codeblocks: embed context in notes ("My most valuable workflow" - 🌴 Brian)</li>
-              </ul>
-            </li>
-            <li><b>Smart Editor:</b>
-              <ul>
-                <li>Generate &amp; review changes</li>
-              </ul>
-            </li>
-            <li><em>Be the first to know what's coming next!</em></li>
-          </ul>
-        </p>
-        <p>Access the Supporter Community Campfire Chat:
-          <ul>
-            <li>Supporter-only private discussions</li>
+            <li>Private discussions</li>
             <li>Share workflows</li>
-            <li>Get priority help &amp; support</li>
+            <li>Help prioritize maintenance and improvements</li>
           </ul>
         </p>
-        <p>Guaranteed seat in the Community Lean Coffee meetings.</p>
         <p><i>Your support shapes the future of ${plugin_name}.</i></p>
         <p>
-          <strong>Fuel the circle of empowerment.</strong> <a href="https://smartconnections.app/community-supporters?utm_source=obsidian-${plugin_name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}" class="button" target="_external">Become a Supporter</a>
+          <a href="https://smartconnections.app/community-supporters?utm_source=obsidian-${plugin_name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}" class="button" target="_external">Support the project</a>
         </p>
       </div>
     </div>
@@ -72,8 +48,5 @@ async function post_process(plugin, container) {
     this.empty(icon_container);
     icon_container.appendChild(icon);
   }
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
-  const is_logged_in = !!localStorage.getItem(oauth_storage_prefix+'token');
-  if (is_logged_in) container.querySelector('#footer-callout').style.display = 'none';
   await this.render_setting_components(container, { scope: plugin.env });
 }

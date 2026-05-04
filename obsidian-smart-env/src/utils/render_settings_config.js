@@ -1,5 +1,5 @@
 // import { SettingGroup } from 'obsidian';
-import { Setting, setIcon, Notice } from 'obsidian';
+import { Setting, setIcon } from 'obsidian';
 import { get_by_path, set_by_path } from 'smart-utils';
 import {
   build_settings_group_map,
@@ -145,8 +145,6 @@ export function render_settings_group(group_name, scope, settings_config, contai
       console.warn(`Invalid setting config for ${setting_path}:`, setting_config);
       continue;
     }
-    const settng_is_pro = setting_config.scope_class === 'pro-setting';
-    const env_is_pro = !!scope.env?.is_pro || !!scope.is_pro;
     setting_group.addSetting(setting => {
       // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
@@ -170,10 +168,6 @@ export function render_settings_group(group_name, scope, settings_config, contai
           setting.addToggle((toggle) => {
             toggle.setValue(get_by_path(scope.settings, setting_path) || false);
             toggle.onChange((value) => {
-              if(settng_is_pro && !env_is_pro) {
-                new Notice('Nice try! This is a PRO feature. Please upgrade to access this setting.');
-                return;
-              }
               set_by_path(scope.settings, setting_path, value);
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
@@ -240,15 +234,8 @@ export function render_settings_group(group_name, scope, settings_config, contai
           setting.addTextArea((text) => {
             text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
             text.onChange((value) => {
-              if(settng_is_pro && !env_is_pro) {
-                new Notice('Nice try! This is a PRO feature. Please upgrade to access this setting.');
-                return;
-              }
               set_by_path(scope.settings, setting_path, value);
             });
-            if(settng_is_pro && !env_is_pro) {
-              text.setDisabled(true);
-            }
           });
           break;
         case 'slider':
@@ -285,10 +272,6 @@ export function render_settings_group(group_name, scope, settings_config, contai
       }
       if (setting_config.scope_class) {
         setting.settingEl.addClass(setting_config.scope_class);
-      }
-      if(settng_is_pro && !env_is_pro) {
-        // disable the entire setting if it's a pro setting and env is not pro (using obsidian api)
-        setting.setDisabled(true);
       }
     });
   }

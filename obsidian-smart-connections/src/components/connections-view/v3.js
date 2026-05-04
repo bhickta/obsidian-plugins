@@ -9,7 +9,7 @@ import { format_connections_as_links } from '../../utils/format_connections_as_l
 import { filter_hidden_results } from '../../utils/filter_hidden_results.js';
 
 /**
- * Build the main HTML structure for 'Smart Connections Pro' view.
+ * Build the main HTML structure for the Smart Connections view.
  * @param {object} view
  * @param {object} opts
  * @returns {Promise<string>}
@@ -54,7 +54,7 @@ export async function build_html(view, opts = {}) {
 }
 
 /**
- * Render the 'Smart Connections Pro' fragment, including optional ranking.
+ * Render the Smart Connections fragment, including optional ranking.
  * @param {object} view
  * @param {object} opts
  * @returns {Promise<DocumentFragment>}
