@@ -1,5 +1,6 @@
 import { SmartPluginSettingsTab } from "obsidian-smart-env";
 import {render_settings_config} from "obsidian-smart-env/src/utils/render_settings_config.js";
+import { render_embedding_cache_sync_settings } from "../utils/embedding_cache_sync.js";
 
 export class ScEarlySettingsTab extends SmartPluginSettingsTab {
   constructor(app, plugin) {
@@ -24,6 +25,13 @@ export class ScEarlySettingsTab extends SmartPluginSettingsTab {
     container.innerHTML = '<div class="sc-loading">Loading main settings...</div>';
 
     container.empty?.();
+
+    const sync_container = container.createDiv({
+      cls: 'sc-settings-tab__section',
+      attr: { 'data-section-key': 'embedding_cache_sync' },
+    });
+    sync_container.createEl('h1', { text: 'Embedding Cache Sync' });
+    await render_embedding_cache_sync_settings(this.plugin, sync_container);
 
     const cl_container = container.createDiv({
       cls: 'sc-settings-tab__section',

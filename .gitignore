@@ -4,6 +4,7 @@ node_modules/
 # Build output
 main.js
 *.js.map
+!obsidian-smart-connections/src/main.js
 
 # OS files
 .DS_Store

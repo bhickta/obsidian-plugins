@@ -3,6 +3,11 @@ import type NoteMergerPlugin from "../main";
 
 export const MERGE_QUEUE_VIEW_TYPE = "note-merger-queue";
 
+interface SmartConnectionsApi {
+    version?: number;
+    getVisibleConnectionPaths?: (opts?: { include_hidden?: boolean }) => Promise<string[]>;
+}
+
 export class MergeQueueView extends ItemView {
     plugin: NoteMergerPlugin;
     queuedFiles: TFile[] = [];
@@ -25,7 +30,7 @@ export class MergeQueueView extends ItemView {
 
         // Import from Smart Connections button
         this.importBtn = c.createEl("button", { text: "⬇ Import from Smart Connections", cls: "note-merger-import-sc-btn" });
-        this.importBtn.onclick = () => this.importFromSmartConnections();
+        this.importBtn.onclick = () => { void this.importFromSmartConnections(); };
 
         this.dropZone = c.createDiv({ cls: "note-merger-drop-zone" });
         this.dropZone.createDiv({ cls: "note-merger-drop-icon", text: "⊕" });
@@ -47,32 +52,12 @@ export class MergeQueueView extends ItemView {
         this.renderList();
     }
 
-    private importFromSmartConnections() {
+    private async importFromSmartConnections() {
         const active = this.app.workspace.getActiveFile();
         if (!active) { new Notice("Open a target note first"); return; }
 
-        const scLeaves = this.app.workspace.getLeavesOfType("smart-connections-view");
-        if (!scLeaves.length) { new Notice("Smart Connections panel not open"); return; }
-
-        const candidates: TFile[] = [];
-        for (const leaf of scLeaves) {
-            const scContainer = leaf.view.containerEl;
-            const results = scContainer.querySelectorAll(".sc-result[data-path]");
-            for (const el of Array.from(results)) {
-                const htmlEl = el as HTMLElement;
-                if (htmlEl.dataset.hidden === "true" || htmlEl.style.display === "none") continue;
-
-                const filePath = htmlEl.dataset.path;
-                if (!filePath) continue;
-
-                const fullPath = filePath.endsWith(".md") ? filePath : filePath + ".md";
-                const file = this.app.vault.getAbstractFileByPath(fullPath);
-                if (!(file instanceof TFile)) continue;
-                if (file.path === active.path) continue;
-                if (this.queuedFiles.some(f => f.path === file.path)) continue;
-                if (!candidates.some(c => c.path === file.path)) candidates.push(file);
-            }
-        }
+        const candidates = await this.getCandidatesFromSmartConnections(active);
+        if (candidates === null) return;
 
         if (candidates.length > 0) {
             new SmartConnectionsImportModal(this.app, candidates, (selected) => {
@@ -87,8 +72,52 @@ export class MergeQueueView extends ItemView {
                 }
             }).open();
         } else {
-            new Notice("No new notes found in Smart Connections panel");
+            new Notice("No new notes found in Smart Connections");
         }
+    }
+
+    private async getCandidatesFromSmartConnections(active: TFile): Promise<TFile[] | null> {
+        const api = this.getSmartConnectionsApi();
+        if (!api || typeof api.getVisibleConnectionPaths !== "function") {
+            new Notice("Smart Connections bridge API not available. Update and enable Smart Connections.");
+            return null;
+        }
+
+        try {
+            const paths = await api.getVisibleConnectionPaths({ include_hidden: false });
+            return this.pathsToCandidateFiles(paths, active);
+        } catch (error) {
+            console.error("Smart Connections bridge import failed", error);
+            new Notice("Smart Connections bridge import failed. Check console for details.");
+            return null;
+        }
+    }
+
+    private getSmartConnectionsApi(): SmartConnectionsApi | null {
+        const smartConnectionsPlugin = (this.app as any).plugins?.plugins?.["smart-connections"];
+        return smartConnectionsPlugin?.api || null;
+    }
+
+    private pathsToCandidateFiles(paths: string[], active: TFile): TFile[] {
+        const candidates: TFile[] = [];
+        for (const path of paths) {
+            const file = this.resolveCandidateFile(path, active);
+            if (!file) continue;
+            if (file.path === active.path) continue;
+            if (this.queuedFiles.some(f => f.path === file.path)) continue;
+            if (!candidates.some(c => c.path === file.path)) candidates.push(file);
+        }
+        return candidates;
+    }
+
+    private resolveCandidateFile(path: string, active: TFile): TFile | null {
+        const withoutFragment = path.split("#")[0].split("^")[0];
+        const fullPath = withoutFragment.endsWith(".md") ? withoutFragment : withoutFragment + ".md";
+        const direct = this.app.vault.getAbstractFileByPath(fullPath);
+        if (direct instanceof TFile) return direct;
+        const linkPath = withoutFragment.replace(/\.md$/i, "");
+        const linked = this.app.metadataCache.getFirstLinkpathDest(linkPath, active.path);
+        return linked instanceof TFile ? linked : null;
     }
 
     private setupDragHandlers(el: HTMLElement) {
