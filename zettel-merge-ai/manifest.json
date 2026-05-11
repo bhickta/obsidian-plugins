@@ -1,0 +1,10 @@
+{
+  "id": "zettel-merge-ai",
+  "name": "Zettel Merge AI",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Safely auto-suggest and merge Zettelkasten notes using OpenAI-compatible local or remote models.",
+  "author": "Nishant bhickta",
+  "authorUrl": "https://github.com/bhickta",
+  "isDesktopOnly": true
+}

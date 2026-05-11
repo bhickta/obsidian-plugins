@@ -16,14 +16,14 @@ Usage:
   ./scripts/install_plugins.sh [options] /path/to/Vault [...]
 
 Options:
-  --plugin NAME     all | note-merger | smart-connections (default: all)
+  --plugin NAME     all | note-merger | smart-connections | zettel-merge-ai (default: all)
   --no-build        copy existing build outputs without running npm build
   --hotreload       create .hotreload in each installed plugin folder
   -h, --help        show this help
 
 Examples:
   ./scripts/install_plugins.sh "$HOME/Documents/My Vault"
-  ./scripts/install_plugins.sh --plugin note-merger --hotreload "$HOME/Vaults/UPSC"
+  ./scripts/install_plugins.sh --plugin zettel-merge-ai --hotreload "$HOME/Vaults/UPSC"
   ./scripts/install_plugins.sh --no-build "$HOME/Vault A" "$HOME/Vault B"
 USAGE
 }
@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$PLUGIN" in
-  all|note-merger|smart-connections) ;;
+  all|note-merger|smart-connections|zettel-merge-ai) ;;
   *)
     echo "Invalid plugin: $PLUGIN" >&2
     usage >&2
@@ -116,6 +116,9 @@ if [[ "$BUILD" -eq 1 ]]; then
   if [[ "$PLUGIN" == "all" || "$PLUGIN" == "smart-connections" ]]; then
     build_plugin "obsidian-smart-connections"
   fi
+  if [[ "$PLUGIN" == "all" || "$PLUGIN" == "zettel-merge-ai" ]]; then
+    build_plugin "zettel-merge-ai"
+  fi
 fi
 
 for vault in "${VAULTS[@]}"; do
@@ -124,6 +127,9 @@ for vault in "${VAULTS[@]}"; do
   fi
   if [[ "$PLUGIN" == "all" || "$PLUGIN" == "smart-connections" ]]; then
     copy_plugin "$vault" "smart-connections" "$ROOT_DIR/obsidian-smart-connections/dist"
+  fi
+  if [[ "$PLUGIN" == "all" || "$PLUGIN" == "zettel-merge-ai" ]]; then
+    copy_plugin "$vault" "zettel-merge-ai" "$ROOT_DIR/zettel-merge-ai"
   fi
 done
 

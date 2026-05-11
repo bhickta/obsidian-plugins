@@ -1,0 +1,26 @@
+{
+  "name": "zettel-merge-ai",
+  "version": "0.1.0",
+  "description": "Auto-suggest and safely merge Zettelkasten notes with OpenAI-compatible local models.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "zettelkasten",
+    "merge",
+    "local-ai"
+  ],
+  "author": "Nishant bhickta",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "builtin-modules": "^5.0.0",
+    "esbuild": "^0.27.4",
+    "obsidian": "latest",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  }
+}

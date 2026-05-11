@@ -1,0 +1,50 @@
+.zettel-merge-ai-modal {
+  width: min(980px, 92vw);
+}
+
+.zettel-merge-ai-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  max-height: 58vh;
+  overflow: auto;
+}
+
+.zettel-merge-ai-candidate {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: auto 1fr auto;
+  padding: 10px;
+}
+
+.zettel-merge-ai-title {
+  font-weight: 600;
+}
+
+.zettel-merge-ai-meta {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.zettel-merge-ai-reason {
+  grid-column: 2 / 4;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.zettel-merge-ai-footer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.zettel-merge-ai-status {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-right: auto;
+}
