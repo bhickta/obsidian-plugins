@@ -187,18 +187,7 @@ export class MergeEngine {
     const response = await this.client.chatJson<DecisionsResponse>([
       {
         role: "system",
-        content: [
-          "You are a conservative Zettelkasten mergeability judge.",
-          "Return JSON only.",
-          "Goal: prevent bloated notes. Related is not mergeable.",
-          "Use action=merge only when the candidate is a duplicate, same-concept fragment, direct subsection of the active note's exact concept, or a definition/etymology expansion of the active note's exact primary term.",
-          "Use action=skip for broad context, taxonomy/classification, history, examples-only, commodity-specific applications, parent/child context, same broad subject, or separate concepts.",
-          "If the active note is narrow, do not merge broader overview notes into it.",
-          "If merging would turn a narrow note into a large master note, skip.",
-          "Confidence rules: only duplicate/same_concept_fragment can exceed 0.94. direct_subsection/definition_expansion should usually be 0.86-0.93. broad_context/taxonomy/example_only must be skip and below 0.75.",
-          "Allowed relationship values: duplicate, same_concept_fragment, direct_subsection, definition_expansion, broad_context, taxonomy, example_only, separate_concept, topic_mismatch.",
-          "Do not suggest links. This workflow only merges or skips.",
-        ].join("\n"),
+        content: this.suggestionSystemPrompt(),
       },
       {
         role: "user",
@@ -232,7 +221,9 @@ export class MergeEngine {
         if (confidence < this.settings.reviewThreshold) return null;
         const relationship = this.normalizeRelationship((raw as any).relationship);
         if (!this.isMergeableRelationship(relationship)) return null;
-        if ((relationship === "direct_subsection" || relationship === "definition_expansion") && confidence < 0.9) return null;
+        if (!this.isBroadTopicMode()
+          && (relationship === "direct_subsection" || relationship === "definition_expansion")
+          && confidence < 0.9) return null;
         const decision: MergeDecision = {
           path: candidate.file.path,
           action: "merge",
@@ -245,6 +236,40 @@ export class MergeEngine {
       })
       .filter((value): value is MergeSuggestion => value !== null)
       .sort((a, b) => b.decision.confidence - a.decision.confidence);
+  }
+
+  private suggestionSystemPrompt(): string {
+    const common = [
+      "Return JSON only.",
+      "Allowed relationship values: duplicate, same_concept_fragment, direct_subsection, definition_expansion, broad_context, taxonomy, example_only, separate_concept, topic_mismatch.",
+      "Do not suggest links. This workflow only merges or skips.",
+    ];
+
+    if (this.isBroadTopicMode()) {
+      return [
+        "You are a broad-topic Zettelkasten mergeability judge.",
+        "The active note is a seed for a larger master note or chapter-level note.",
+        "Goal: gather notes that belong under the same broad topic, institution, exam chapter, scheme, tax, act, movement, place, person, or conceptual family.",
+        "Use action=merge when the candidate would naturally fit as a section/subsection/example inside the same master note.",
+        "Use action=merge for duplicate, same_concept_fragment, direct_subsection, definition_expansion, broad_context, taxonomy, and example_only, but only when they share the same broad topic as the active note.",
+        "Use action=skip for unrelated/separate concepts, accidental keyword overlap, different institutions, different policy areas, or topic_mismatch.",
+        "Examples: If active note is about IMF tranches, IMF quota, SDR, IMF facilities, World Economic Outlook, and IMF origins can merge into an IMF master note; RBI CRR/SLR monetary policy should skip.",
+        "Examples: If active note is about indirect taxes, excise/sales tax/GST/customs/VAT/CST/tax shifting can merge into an indirect taxation master note; unrelated fiscal deficit notes should skip.",
+        "Confidence rules: same broad topic can be 0.85-0.95. Unrelated or merely keyword-overlapping candidates must be skip and below 0.75.",
+        ...common,
+      ].join("\n");
+    }
+
+    return [
+      "You are a conservative Zettelkasten mergeability judge.",
+      "Goal: prevent bloated notes. Related is not mergeable.",
+      "Use action=merge only when the candidate is a duplicate, same-concept fragment, direct subsection of the active note's exact concept, or a definition/etymology expansion of the active note's exact primary term.",
+      "Use action=skip for broad context, taxonomy/classification, history, examples-only, commodity-specific applications, parent/child context, same broad subject, or separate concepts.",
+      "If the active note is narrow, do not merge broader overview notes into it.",
+      "If merging would turn a narrow note into a large master note, skip.",
+      "Confidence rules: only duplicate/same_concept_fragment can exceed 0.94. direct_subsection/definition_expansion should usually be 0.86-0.93. broad_context/taxonomy/example_only must be skip and below 0.75.",
+      ...common,
+    ].join("\n");
   }
 
   private normalizeRelationship(value: unknown): MergeDecision["relationship"] {
@@ -265,10 +290,24 @@ export class MergeEngine {
   }
 
   private isMergeableRelationship(relationship: MergeDecision["relationship"]): boolean {
+    if (this.isBroadTopicMode()) {
+      return relationship === "duplicate"
+        || relationship === "same_concept_fragment"
+        || relationship === "direct_subsection"
+        || relationship === "definition_expansion"
+        || relationship === "broad_context"
+        || relationship === "taxonomy"
+        || relationship === "example_only";
+    }
+
     return relationship === "duplicate"
       || relationship === "same_concept_fragment"
       || relationship === "direct_subsection"
       || relationship === "definition_expansion";
+  }
+
+  private isBroadTopicMode(): boolean {
+    return this.settings.suggestionMode === "broad_topic";
   }
 
   private async judgeMergedOutput(sourceMaterial: string, candidate: string): Promise<JudgeResult> {

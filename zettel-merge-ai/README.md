@@ -38,6 +38,11 @@ Use **Refresh available models** in settings to call `GET /models` and populate 
 
 The **Suggestion model** can be different from the main chat model. It only receives compact active/candidate note excerpts and returns strict JSON saying whether each candidate should be merged or skipped. The main **Chat model** is still used for the actual merge and no-loss judge.
 
+## Suggestion Modes
+
+- **Broad topic / master note**: treats the active note as a seed for a larger topic note. Useful for merging all IMF, GST, Indirect Tax, or similar chapter-level notes together.
+- **Strict atomic note**: suggests only duplicate or same-concept fragments. Useful when you want small Zettelkasten notes to stay narrow.
+
 ## Archive Layout
 
 ```text

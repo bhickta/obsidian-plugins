@@ -70,6 +70,17 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h3", { text: "Automation" });
     new Setting(containerEl)
+      .setName("Suggestion mode")
+      .setDesc("Strict keeps atomic notes narrow. Broad topic builds master notes such as IMF, GST, or Indirect Taxes.")
+      .addDropdown(dropdown => dropdown
+        .addOption("broad_topic", "Broad topic / master note")
+        .addOption("strict", "Strict atomic note")
+        .setValue(this.plugin.settings.suggestionMode)
+        .onChange(async value => {
+          this.plugin.settings.suggestionMode = value as "strict" | "broad_topic";
+          await this.plugin.saveSettings();
+        }));
+    new Setting(containerEl)
       .setName("Embedding index")
       .setDesc("Build or update embeddings for every markdown note in the configured Zettelkasten folder.")
       .addButton(button => button

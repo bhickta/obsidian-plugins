@@ -12,6 +12,7 @@ export interface ZettelMergeSettings {
   cachedEmbeddingModels: string[];
   cachedModelIds: string[];
   modelsRefreshedAt: string;
+  suggestionMode: "strict" | "broad_topic";
   autoSuggestOnOpen: boolean;
   autoMergeEnabled: boolean;
   deleteSourcesAfterMerge: boolean;
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   cachedEmbeddingModels: [],
   cachedModelIds: [],
   modelsRefreshedAt: "",
+  suggestionMode: "broad_topic",
   autoSuggestOnOpen: true,
   autoMergeEnabled: false,
   deleteSourcesAfterMerge: true,
