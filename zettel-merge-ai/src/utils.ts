@@ -84,7 +84,12 @@ export async function ensureFolder(app: App, folderPath: string): Promise<void> 
   let current = "";
   for (const part of parts) {
     current = current ? `${current}/${part}` : part;
-    if (!app.vault.getAbstractFileByPath(current)) await app.vault.createFolder(current);
+    if (await app.vault.adapter.exists(current, true)) continue;
+    try {
+      await app.vault.adapter.mkdir(current);
+    } catch (error) {
+      if (!(await app.vault.adapter.exists(current, true))) throw error;
+    }
   }
 }
 
@@ -92,25 +97,27 @@ export async function writeText(app: App, path: string, content: string): Promis
   const normalized = normalizePath(path);
   const folder = normalized.substring(0, normalized.lastIndexOf("/"));
   if (folder) await ensureFolder(app, folder);
-  const existing = app.vault.getAbstractFileByPath(normalized);
-  if (existing instanceof TFile) await app.vault.modify(existing, content);
-  else await app.vault.create(normalized, content);
+  await app.vault.adapter.write(normalized, content);
 }
 
 export async function appendText(app: App, path: string, content: string): Promise<void> {
   const normalized = normalizePath(path);
   const folder = normalized.substring(0, normalized.lastIndexOf("/"));
   if (folder) await ensureFolder(app, folder);
-  const existing = app.vault.getAbstractFileByPath(normalized);
-  if (existing instanceof TFile) await app.vault.append(existing, content);
-  else await app.vault.create(normalized, content);
+  if (await app.vault.adapter.exists(normalized, true)) await app.vault.adapter.append(normalized, content);
+  else await app.vault.adapter.write(normalized, content);
+}
+
+export async function readText(app: App, path: string): Promise<string> {
+  const normalized = normalizePath(path);
+  return await app.vault.adapter.read(normalized);
 }
 
 export async function readJson<T>(app: App, path: string, fallback: T): Promise<T> {
-  const file = app.vault.getAbstractFileByPath(normalizePath(path));
-  if (!(file instanceof TFile)) return fallback;
+  const normalized = normalizePath(path);
+  if (!(await app.vault.adapter.exists(normalized, true))) return fallback;
   try {
-    return JSON.parse(await app.vault.read(file)) as T;
+    return JSON.parse(await app.vault.adapter.read(normalized)) as T;
   } catch {
     return fallback;
   }

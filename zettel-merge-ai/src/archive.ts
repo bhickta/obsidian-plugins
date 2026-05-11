@@ -8,7 +8,7 @@ import {
   MergeJobManifest,
   ZettelMergeSettings,
 } from "./types";
-import { appendText, byteLength, readJson, sanitizeFileName, sha256, writeText } from "./utils";
+import { appendText, byteLength, readJson, readText, sanitizeFileName, sha256, writeText } from "./utils";
 
 interface JobIndexEntry {
   job_id: string;
@@ -250,9 +250,11 @@ export class ArchiveStore {
   }
 
   private async restoreEntry(basePath: string, entry: ArchiveFileEntry): Promise<void> {
-    const archiveFile = this.app.vault.getAbstractFileByPath(`${basePath}/${entry.archive_path}`);
-    if (!(archiveFile instanceof TFile)) throw new Error(`Missing archive file: ${entry.archive_path}`);
-    const content = await this.app.vault.read(archiveFile);
+    const archivePath = `${basePath}/${entry.archive_path}`;
+    if (!(await this.app.vault.adapter.exists(normalizePath(archivePath), true))) {
+      throw new Error(`Missing archive file: ${entry.archive_path}`);
+    }
+    const content = await readText(this.app, archivePath);
     await writeText(this.app, entry.original_path, content);
   }
 
