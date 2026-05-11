@@ -97,7 +97,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "Thresholds" });
     this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit", 1, 50);
     this.numberSetting("Max files to scan", "Fallback live-scan cap used before a full embedding index exists.", "maxFilesToScan", 10, 5000);
-    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request.", "embeddingBatchSize", 1, 64);
+    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request.", "embeddingBatchSize", 1, 256);
     this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery", 10, 1000);
     this.numberSetting("Review threshold", "Candidates below this merge confidence are hidden.", "reviewThreshold", 0, 1, 0.01);
     this.numberSetting("Auto-merge threshold", "Auto command only merges candidates at or above this confidence.", "autoMergeThreshold", 0, 1, 0.01);

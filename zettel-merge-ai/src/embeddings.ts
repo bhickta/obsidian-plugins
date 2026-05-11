@@ -7,6 +7,8 @@ interface EmbeddingCacheItem {
   hash: string;
   embedding: number[];
   updated_at: string;
+  mtime?: number;
+  size?: number;
 }
 
 interface EmbeddingCache {
@@ -25,6 +27,8 @@ interface PendingEmbedding {
   file: TFile;
   source: string;
   hash: string;
+  mtime: number;
+  size: number;
 }
 
 export class EmbeddingIndex {
@@ -62,27 +66,39 @@ export class EmbeddingIndex {
           hash: batch[i].hash,
           embedding: vectors[i],
           updated_at: new Date().toISOString(),
+          mtime: batch[i].mtime,
+          size: batch[i].size,
         };
       }
       embedded += batch.length;
-      await this.saveCache(cache);
     };
 
     for (const file of files) {
       processed++;
       if (onProgress) onProgress(`Indexing ${processed}/${files.length}: ${file.path}`);
+      const existing = cache.items[file.path];
+      if (existing && existing.mtime === file.stat.mtime && existing.size === file.stat.size) {
+        reused++;
+        continue;
+      }
+
       const content = await this.app.vault.read(file);
       const source = compactNote(file.path, content, this.settings.embeddingSourceChars);
       const hash = sha256(`${this.settings.embeddingModel}\n${source}`);
       const item = cache.items[file.path];
       if (item && item.hash === hash) {
+        item.mtime = file.stat.mtime;
+        item.size = file.stat.size;
         reused++;
       } else {
-        pending.push({ file, source, hash });
+        pending.push({ file, source, hash, mtime: file.stat.mtime, size: file.stat.size });
       }
 
       if (pending.length >= batchSize) await flush();
-      if (processed % saveEvery === 0) await this.saveCache(cache);
+      if (processed % saveEvery === 0) {
+        await this.saveCache(cache);
+        if (onProgress) onProgress(`Checkpoint saved: ${processed}/${files.length} scanned, ${embedded} embedded, ${reused} reused.`);
+      }
     }
 
     await flush();
@@ -183,6 +199,8 @@ export class EmbeddingIndex {
           hash,
           embedding: await this.client.embedding(source),
           updated_at: new Date().toISOString(),
+          mtime: file.stat.mtime,
+          size: file.stat.size,
         };
         cache.items[file.path] = item;
         embedded++;

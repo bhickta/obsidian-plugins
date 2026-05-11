@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   deleteSourcesAfterMerge: true,
   candidateLimit: 12,
   maxFilesToScan: 300,
-  embeddingBatchSize: 8,
+  embeddingBatchSize: 32,
   embeddingIndexSaveEvery: 100,
   reviewThreshold: 0.85,
   autoMergeThreshold: 0.95,
