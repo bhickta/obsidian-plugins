@@ -1,3 +1,4 @@
+import { requestUrl } from "obsidian";
 import { ChatMessage, ZettelMergeSettings } from "./types";
 import { extractJson } from "./utils";
 
@@ -27,19 +28,33 @@ export class OpenAICompatibleClient {
     return headers;
   }
 
-  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const res = await fetch(this.endpoint("/chat/completions"), {
-      method: "POST",
+  private async requestJson(path: string, method: string, body?: unknown): Promise<any> {
+    const res = await requestUrl({
+      url: this.endpoint(path),
+      method,
       headers: this.headers(),
-      body: JSON.stringify({
+      contentType: "application/json",
+      body: body === undefined ? undefined : JSON.stringify(body),
+      throw: false,
+    });
+
+    if (res.status < 200 || res.status >= 300) {
+      const text = res.text || JSON.stringify(res.json || {});
+      throw new Error(`[${res.status}] ${text}`);
+    }
+    return res.json;
+  }
+
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
+    const data = await this.requestJson(
+      "/chat/completions",
+      "POST",
+      {
         model: this.settings.chatModel,
         messages,
         temperature: options.temperature ?? 0,
-      }),
-    });
-
-    if (!res.ok) throw new Error(`[${res.status}] ${await res.text()}`);
-    const data = await res.json();
+      },
+    );
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== "string") throw new Error("Chat response did not include message content.");
     return content;
@@ -51,17 +66,14 @@ export class OpenAICompatibleClient {
   }
 
   async embedding(input: string): Promise<number[]> {
-    const res = await fetch(this.endpoint("/embeddings"), {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({
+    const data = await this.requestJson(
+      "/embeddings",
+      "POST",
+      {
         model: this.settings.embeddingModel,
         input,
-      }),
-    });
-
-    if (!res.ok) throw new Error(`[${res.status}] ${await res.text()}`);
-    const data = await res.json();
+      },
+    );
     const embedding = data.data?.[0]?.embedding;
     if (!Array.isArray(embedding)) throw new Error("Embedding response did not include data[0].embedding.");
     return embedding.map(Number);
@@ -72,9 +84,7 @@ export class OpenAICompatibleClient {
   }
 
   async listModelInfos(): Promise<OpenAIModelInfo[]> {
-    const res = await fetch(this.endpoint("/models"), { headers: this.headers() });
-    if (!res.ok) throw new Error(`[${res.status}] ${await res.text()}`);
-    const data = await res.json();
+    const data = await this.requestJson("/models", "GET");
     return (data.data || [])
       .map((model: any) => ({
         id: String(model.id || ""),
