@@ -2,6 +2,7 @@ import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from "obsidia
 import ZettelMergeAIPlugin from "./main";
 import { DEFAULT_MERGE_PROMPT, ZettelMergeSettings } from "./types";
 import { OpenAICompatibleClient, OpenAIModelInfo } from "./openai-client";
+import { isVisibleMarkdownInScope, readJson } from "./utils";
 
 export class ZettelMergeSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: ZettelMergeAIPlugin) {
@@ -68,6 +69,27 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     });
 
     containerEl.createEl("h3", { text: "Automation" });
+    new Setting(containerEl)
+      .setName("Embedding index")
+      .setDesc("Build or update embeddings for every markdown note in the configured Zettelkasten folder.")
+      .addButton(button => button
+        .setButtonText("Build full index")
+        .setCta()
+        .onClick(async () => {
+          button.setDisabled(true).setButtonText("Building...");
+          try {
+            await this.plugin.buildFullEmbeddingIndexFromSettings();
+            await this.renderIndexStatus();
+          } finally {
+            button.setDisabled(false).setButtonText("Build full index");
+          }
+        }));
+    const indexStatus = containerEl.createDiv({
+      text: "Embedding index: checking...",
+      cls: "setting-item-description",
+    });
+    void this.renderIndexStatus(indexStatus);
+
     this.toggleSetting("Auto-suggest on note open", "When opening a scoped note, find merge candidates and show the review modal.", "autoSuggestOnOpen");
     this.toggleSetting("Enable auto-merge command", "Allows the auto-merge command to apply high-confidence candidates without the review modal.", "autoMergeEnabled");
     this.toggleSetting("Delete source notes after successful merge", "Sources are deleted from the visible vault only after archive, quality, rollback, and training files are written.", "deleteSourcesAfterMerge");
@@ -211,6 +233,25 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     } finally {
       button.setDisabled(false).setButtonText("Refresh");
     }
+  }
+
+  private async renderIndexStatus(el?: HTMLElement): Promise<void> {
+    const target = el || this.containerEl.querySelector(".zettel-merge-ai-index-status") as HTMLElement | null;
+    const statusEl = target || this.containerEl.createDiv({ cls: "setting-item-description zettel-merge-ai-index-status" });
+    statusEl.addClass("zettel-merge-ai-index-status");
+    const total = this.app.vault.getMarkdownFiles()
+      .filter(file => isVisibleMarkdownInScope(file, this.plugin.settings.rootFolder, this.plugin.settings.dataFolder))
+      .length;
+    const cache = await readJson<any>(
+      this.app,
+      `${this.plugin.settings.dataFolder}/index/embeddings.json`,
+      { items: {}, full_index: null },
+    );
+    const indexed = Object.keys(cache.items || {}).length;
+    const full = cache.full_index?.completed
+      ? `full index built ${new Date(cache.full_index.built_at).toLocaleString()}`
+      : "full index not built";
+    statusEl.setText(`Embedding index: ${indexed}/${total} cached; ${full}.`);
   }
 
   private withCurrentModel(models: string[], current: string): string[] {

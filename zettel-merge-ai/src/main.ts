@@ -78,6 +78,10 @@ export default class ZettelMergeAIPlugin extends Plugin {
     if (this.progressModal && text) this.progressModal.setStatus(text);
   }
 
+  async buildFullEmbeddingIndexFromSettings(): Promise<void> {
+    await this.withProgress("Building Full Embedding Index", engine => engine.buildFullEmbeddingIndex());
+  }
+
   private engine(): MergeEngine {
     return new MergeEngine(this.app, this.settings, text => this.setStatus(text));
   }
