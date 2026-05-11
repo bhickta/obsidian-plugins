@@ -6,6 +6,7 @@ export interface ZettelMergeSettings {
   baseUrl: string;
   apiKey: string;
   chatModel: string;
+  suggestionModel: string;
   embeddingModel: string;
   cachedChatModels: string[];
   cachedEmbeddingModels: string[];
@@ -16,6 +17,8 @@ export interface ZettelMergeSettings {
   deleteSourcesAfterMerge: boolean;
   candidateLimit: number;
   maxFilesToScan: number;
+  embeddingBatchSize: number;
+  embeddingIndexSaveEvery: number;
   reviewThreshold: number;
   autoMergeThreshold: number;
   validationThreshold: number;
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   baseUrl: "http://127.0.0.1:1234/v1",
   apiKey: "",
   chatModel: "local-model",
+  suggestionModel: "local-model",
   embeddingModel: "text-embedding-nomic-embed-text-v1.5",
   cachedChatModels: [],
   cachedEmbeddingModels: [],
@@ -54,6 +58,8 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   deleteSourcesAfterMerge: true,
   candidateLimit: 12,
   maxFilesToScan: 300,
+  embeddingBatchSize: 8,
+  embeddingIndexSaveEvery: 100,
   reviewThreshold: 0.85,
   autoMergeThreshold: 0.95,
   validationThreshold: 0.98,
@@ -134,6 +140,7 @@ export interface MergeJobManifest {
   source_files: ArchiveFileEntry[];
   final_files: Array<{ path: string; archive_path: string; sha256: string; bytes: number }>;
   model_chat: string;
+  model_suggestion: string;
   model_embedding: string;
   attempts: number;
   decisions: MergeDecision[];

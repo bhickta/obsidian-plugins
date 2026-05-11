@@ -61,6 +61,7 @@ export class ArchiveStore {
       source_files: sourceEntries,
       final_files: [],
       model_chat: this.settings.chatModel,
+      model_suggestion: this.settings.suggestionModel || this.settings.chatModel,
       model_embedding: this.settings.embeddingModel,
       attempts: 0,
       decisions,
@@ -209,6 +210,7 @@ export class ArchiveStore {
       coverage_score: coverage.score,
       attempts: job.manifest.attempts,
       model_chat: this.settings.chatModel,
+      model_suggestion: this.settings.suggestionModel || this.settings.chatModel,
     };
 
     const sft = {

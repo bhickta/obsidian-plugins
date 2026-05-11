@@ -4,6 +4,7 @@ import { extractJson } from "./utils";
 
 interface ChatOptions {
   temperature?: number;
+  model?: string;
 }
 
 export interface OpenAIModelInfo {
@@ -50,7 +51,7 @@ export class OpenAICompatibleClient {
       "/chat/completions",
       "POST",
       {
-        model: this.settings.chatModel,
+        model: options.model || this.settings.chatModel,
         messages,
         temperature: options.temperature ?? 0,
       },
@@ -66,17 +67,30 @@ export class OpenAICompatibleClient {
   }
 
   async embedding(input: string): Promise<number[]> {
+    const embeddings = await this.embeddings([input]);
+    return embeddings[0];
+  }
+
+  async embeddings(inputs: string[]): Promise<number[][]> {
     const data = await this.requestJson(
       "/embeddings",
       "POST",
       {
         model: this.settings.embeddingModel,
-        input,
+        input: inputs.length === 1 ? inputs[0] : inputs,
       },
     );
-    const embedding = data.data?.[0]?.embedding;
-    if (!Array.isArray(embedding)) throw new Error("Embedding response did not include data[0].embedding.");
-    return embedding.map(Number);
+    const rows = Array.isArray(data.data) ? data.data : [];
+    if (rows.length !== inputs.length) {
+      throw new Error(`Embedding response returned ${rows.length} item(s) for ${inputs.length} input(s).`);
+    }
+    const sorted = rows.every((row: any) => typeof row.index === "number")
+      ? [...rows].sort((a: any, b: any) => a.index - b.index)
+      : rows;
+    return sorted.map((row: any) => {
+      if (!Array.isArray(row.embedding)) throw new Error("Embedding response did not include embedding arrays.");
+      return row.embedding.map(Number);
+    });
   }
 
   async listModels(): Promise<string[]> {

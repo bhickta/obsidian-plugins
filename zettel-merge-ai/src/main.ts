@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { CandidateMergeModal } from "./modals";
+import { CandidateMergeModal, ProgressModal } from "./modals";
 import { MergeEngine } from "./merge-engine";
 import { ZettelMergeSettingTab } from "./settings-tab";
 import { DEFAULT_SETTINGS, ZettelMergeSettings } from "./types";
@@ -10,6 +10,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
   private statusBarEl: HTMLElement | null = null;
   private autoSuggestTimer: number | null = null;
   private modalOpen = false;
+  private progressModal: ProgressModal | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -35,7 +36,13 @@ export default class ZettelMergeAIPlugin extends Plugin {
     this.addCommand({
       id: "clear-embedding-cache",
       name: "Clear embedding cache",
-      callback: () => void this.runSafely(engine => engine.rebuildEmbeddingIndex()),
+      callback: () => void this.runSafely(engine => engine.clearEmbeddingCache()),
+    });
+
+    this.addCommand({
+      id: "build-full-embedding-index",
+      name: "Build full embedding index",
+      callback: () => void this.withProgress("Building Full Embedding Index", engine => engine.buildFullEmbeddingIndex()),
     });
 
     this.addCommand({
@@ -54,7 +61,12 @@ export default class ZettelMergeAIPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const saved = await this.loadData();
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+    if (!this.settings.suggestionModel) {
+      this.settings.suggestionModel = this.settings.chatModel;
+      await this.saveSettings();
+    }
   }
 
   async saveSettings(): Promise<void> {
@@ -63,6 +75,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
 
   setStatus(text: string): void {
     if (this.statusBarEl) this.statusBarEl.setText(text);
+    if (this.progressModal && text) this.progressModal.setStatus(text);
   }
 
   private engine(): MergeEngine {
@@ -70,7 +83,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
   }
 
   private async runSuggestCommand(): Promise<void> {
-    await this.runSafely(async engine => {
+    await this.withProgress("Finding Merge Candidates", async engine => {
       const active = this.requireActiveNote();
       const suggestions = await engine.suggestForActive(false);
       if (suggestions.length) this.openCandidateModal(active, suggestions);
@@ -78,7 +91,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
   }
 
   private async runAutoMergeCommand(): Promise<void> {
-    await this.runSafely(engine => engine.autoMergeActive());
+    await this.withProgress("Auto-merging Active Note", engine => engine.autoMergeActive());
   }
 
   private async runSafely(task: (engine: MergeEngine) => Promise<void>): Promise<void> {
@@ -88,6 +101,23 @@ export default class ZettelMergeAIPlugin extends Plugin {
       console.error(error);
       this.setStatus("");
       new Notice(`Zettel Merge AI: ${(error as Error).message}`, 10000);
+    }
+  }
+
+  private async withProgress(title: string, task: (engine: MergeEngine) => Promise<void>): Promise<void> {
+    if (this.progressModal) this.progressModal.close();
+    this.progressModal = new ProgressModal(this.app, title);
+    this.progressModal.open();
+    try {
+      await this.runSafely(task);
+    } finally {
+      const modal = this.progressModal;
+      window.setTimeout(() => {
+        if (this.progressModal === modal) {
+          modal?.close();
+          this.progressModal = null;
+        }
+      }, 1200);
     }
   }
 
@@ -111,7 +141,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
   private openCandidateModal(active: TFile, suggestions: any[]): void {
     this.modalOpen = true;
     const modal = new CandidateMergeModal(this.app, active, suggestions, async selected => {
-      await this.engine().mergeIntoActive(active, selected);
+      await this.withProgress("Merging Selected Notes", engine => engine.mergeIntoActive(active, selected));
     });
     const originalClose = modal.onClose.bind(modal);
     modal.onClose = () => {

@@ -157,10 +157,18 @@ export class MergeEngine {
     await this.mergeIntoActive(active, auto);
   }
 
-  async rebuildEmbeddingIndex(): Promise<void> {
+  async clearEmbeddingCache(): Promise<void> {
     const index = new EmbeddingIndex(this.app, this.settings, this.client);
     await index.clear();
     new Notice("Zettel Merge AI embedding cache cleared. Run suggestions to rebuild it.");
+  }
+
+  async buildFullEmbeddingIndex(): Promise<void> {
+    const index = new EmbeddingIndex(this.app, this.settings, this.client);
+    this.setStatus("Building full embedding index...");
+    const total = await index.buildFullIndex(text => this.setStatus(text));
+    this.setStatus("");
+    new Notice(`Full embedding index built for ${total} note(s).`, 10000);
   }
 
   async restoreLatestAppliedMerge(): Promise<void> {
@@ -203,7 +211,7 @@ export class MergeEngine {
           },
         }, null, 2),
       },
-    ], { temperature: 0 });
+    ], { temperature: 0, model: this.settings.suggestionModel || this.settings.chatModel });
 
     const byPath = new Map<string, Partial<MergeDecision>>();
     for (const decision of response.decisions || []) {

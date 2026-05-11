@@ -1,6 +1,39 @@
 import { App, Modal, Notice, TFile } from "obsidian";
 import { MergeSuggestion } from "./types";
 
+export class ProgressModal extends Modal {
+  private statusEl!: HTMLElement;
+  private logEl!: HTMLElement;
+  private lastLine = "";
+
+  constructor(app: App, private title: string) {
+    super(app);
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("zettel-merge-ai-modal");
+    contentEl.createEl("h2", { text: this.title });
+    this.statusEl = contentEl.createDiv({ cls: "zettel-merge-ai-progress-status", text: "Starting..." });
+    this.logEl = contentEl.createDiv({ cls: "zettel-merge-ai-progress-log" });
+  }
+
+  setStatus(text: string): void {
+    if (!this.statusEl || !text) return;
+    this.statusEl.setText(text);
+    if (text === this.lastLine) return;
+    this.lastLine = text;
+    const row = this.logEl.createDiv({ cls: "zettel-merge-ai-progress-line" });
+    row.setText(`${new Date().toLocaleTimeString()}  ${text}`);
+    this.logEl.scrollTop = this.logEl.scrollHeight;
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
 export class CandidateMergeModal extends Modal {
   private selected = new Set<string>();
 

@@ -18,6 +18,7 @@ The plugin is designed for local-first workflows such as LM Studio / `lms-server
 
 - **Suggest merge candidates for active note**: embedding search + mergeability judge + review modal.
 - **Auto-merge active note with high-confidence candidates**: runs the full pipeline without the review modal when auto-merge is enabled in settings.
+- **Build full embedding index**: recursively embeds every scoped markdown note and checkpoints progress into `.zettel-merge-ai/index/embeddings.json`.
 - **Clear embedding cache**: forces embeddings to be rebuilt on the next suggestion run.
 - **Restore latest applied merge from archive**: restores the latest archived target/source originals.
 
@@ -34,6 +35,8 @@ Use any OpenAI-compatible chat and embedding model names exposed by your local s
 The API key can be left empty for local servers that do not require authentication.
 
 Use **Refresh available models** in settings to call `GET /models` and populate the chat and embedding dropdowns dynamically. LM Studio's `lms ls` shows models available on disk; the plugin dropdown reflects what the configured OpenAI-compatible server reports.
+
+The **Suggestion model** can be different from the main chat model. It only receives compact active/candidate note excerpts and returns strict JSON saying whether each candidate should be merged or skipped. The main **Chat model** is still used for the actual merge and no-loss judge.
 
 ## Archive Layout
 

@@ -43,8 +43,14 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
       .addButton(button => button.setButtonText("Refresh").onClick(async () => this.refreshModels(button)));
     this.modelSetting(
       "Chat model",
-      "Used for merge decisions, merge generation, and validation.",
+      "Used for merge generation and no-loss validation.",
       "chatModel",
+      () => this.plugin.settings.cachedChatModels,
+    );
+    this.modelSetting(
+      "Suggestion model",
+      "Used only to decide whether candidates should be merged or skipped.",
+      "suggestionModel",
       () => this.plugin.settings.cachedChatModels,
     );
     this.modelSetting(
@@ -68,7 +74,9 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h3", { text: "Thresholds" });
     this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit", 1, 50);
-    this.numberSetting("Max files to scan", "Caps first-pass embedding scan size for large vaults.", "maxFilesToScan", 10, 5000);
+    this.numberSetting("Max files to scan", "Fallback live-scan cap used before a full embedding index exists.", "maxFilesToScan", 10, 5000);
+    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request.", "embeddingBatchSize", 1, 64);
+    this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery", 10, 1000);
     this.numberSetting("Review threshold", "Candidates below this merge confidence are hidden.", "reviewThreshold", 0, 1, 0.01);
     this.numberSetting("Auto-merge threshold", "Auto command only merges candidates at or above this confidence.", "autoMergeThreshold", 0, 1, 0.01);
     this.numberSetting("Validation threshold", "Merge applies only when coverage and judge score meet this value.", "validationThreshold", 0, 1, 0.01);
@@ -113,7 +121,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
   private modelSetting(
     name: string,
     desc: string,
-    key: "chatModel" | "embeddingModel",
+    key: "chatModel" | "suggestionModel" | "embeddingModel",
     getModels: () => string[],
   ): void {
     new Setting(this.containerEl)
@@ -184,6 +192,10 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
       this.plugin.settings.cachedChatModels = this.withCurrentModel(
         chatModels.length ? chatModels : allIds.filter(id => !this.plugin.settings.cachedEmbeddingModels.includes(id)),
         this.plugin.settings.chatModel,
+      );
+      this.plugin.settings.cachedChatModels = this.withCurrentModel(
+        this.plugin.settings.cachedChatModels,
+        this.plugin.settings.suggestionModel,
       );
       this.plugin.settings.modelsRefreshedAt = new Date().toISOString();
 
