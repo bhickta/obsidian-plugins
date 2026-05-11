@@ -162,22 +162,32 @@ export class EmbeddingIndex {
       .sort((a, b) => b.stat.mtime - a.stat.mtime)
       .slice(0, this.settings.maxFilesToScan);
 
+    if (onProgress) {
+      onProgress(`Full embedding index not built; checking latest ${scanFiles.length}/${files.length} notes.`);
+    }
+
     const scored: SimilarCandidate[] = [];
     let processed = 0;
+    let embedded = 0;
+    let reused = 0;
     for (const file of scanFiles) {
       processed++;
-      if (onProgress) onProgress(`Embedding live scan ${processed}/${scanFiles.length}: ${file.basename}`);
+      if (onProgress) onProgress(`Checking live-scan cache ${processed}/${scanFiles.length}: ${file.basename}`);
       const content = await this.app.vault.read(file);
       const source = compactNote(file.path, content, this.settings.embeddingSourceChars);
       const hash = sha256(`${this.settings.embeddingModel}\n${source}`);
       let item = cache.items[file.path];
       if (!item || item.hash !== hash) {
+        if (onProgress) onProgress(`Embedding new/changed note ${processed}/${scanFiles.length}: ${file.basename}`);
         item = {
           hash,
           embedding: await this.client.embedding(source),
           updated_at: new Date().toISOString(),
         };
         cache.items[file.path] = item;
+        embedded++;
+      } else {
+        reused++;
       }
       scored.push({
         file,
@@ -188,6 +198,9 @@ export class EmbeddingIndex {
     }
 
     await this.saveCache(cache);
+    if (onProgress) {
+      onProgress(`Live-scan complete: ${scanFiles.length} checked, ${embedded} embedded, ${reused} reused.`);
+    }
     return scored
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, this.settings.candidateLimit);
