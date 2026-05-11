@@ -188,10 +188,15 @@ export class MergeEngine {
       {
         role: "system",
         content: [
-          "You decide whether candidate Zettelkasten notes should be merged into the active note.",
+          "You are a conservative Zettelkasten mergeability judge.",
           "Return JSON only.",
-          "Use action=merge only for duplicates, fragmented versions of the same concept, or notes whose facts clearly belong inside the active note.",
-          "Use action=skip for merely related notes, parent/child context, same broad subject, or separate concepts.",
+          "Goal: prevent bloated notes. Related is not mergeable.",
+          "Use action=merge only when the candidate is a duplicate, same-concept fragment, direct subsection of the active note's exact concept, or a definition/etymology expansion of the active note's exact primary term.",
+          "Use action=skip for broad context, taxonomy/classification, history, examples-only, commodity-specific applications, parent/child context, same broad subject, or separate concepts.",
+          "If the active note is narrow, do not merge broader overview notes into it.",
+          "If merging would turn a narrow note into a large master note, skip.",
+          "Confidence rules: only duplicate/same_concept_fragment can exceed 0.94. direct_subsection/definition_expansion should usually be 0.86-0.93. broad_context/taxonomy/example_only must be skip and below 0.75.",
+          "Allowed relationship values: duplicate, same_concept_fragment, direct_subsection, definition_expansion, broad_context, taxonomy, example_only, separate_concept, topic_mismatch.",
           "Do not suggest links. This workflow only merges or skips.",
         ].join("\n"),
       },
@@ -205,6 +210,7 @@ export class MergeEngine {
               path: "candidate path",
               action: "merge or skip",
               confidence: "number 0..1",
+              relationship: "one allowed relationship value",
               risk: "low, medium, or high",
               reason: "short reason",
             }],
@@ -224,17 +230,45 @@ export class MergeEngine {
         if (!raw || raw.action !== "merge") return null;
         const confidence = typeof raw.confidence === "number" ? raw.confidence : 0;
         if (confidence < this.settings.reviewThreshold) return null;
+        const relationship = this.normalizeRelationship((raw as any).relationship);
+        if (!this.isMergeableRelationship(relationship)) return null;
+        if ((relationship === "direct_subsection" || relationship === "definition_expansion") && confidence < 0.9) return null;
         const decision: MergeDecision = {
           path: candidate.file.path,
           action: "merge",
           confidence,
           reason: raw.reason || "Model marked this candidate as mergeable.",
           risk: raw.risk === "medium" || raw.risk === "high" ? raw.risk : "low",
+          relationship,
         };
         return { ...candidate, decision };
       })
       .filter((value): value is MergeSuggestion => value !== null)
       .sort((a, b) => b.decision.confidence - a.decision.confidence);
+  }
+
+  private normalizeRelationship(value: unknown): MergeDecision["relationship"] {
+    const allowed: MergeDecision["relationship"][] = [
+      "duplicate",
+      "same_concept_fragment",
+      "direct_subsection",
+      "definition_expansion",
+      "broad_context",
+      "taxonomy",
+      "example_only",
+      "separate_concept",
+      "topic_mismatch",
+    ];
+    return allowed.includes(value as MergeDecision["relationship"])
+      ? value as MergeDecision["relationship"]
+      : "separate_concept";
+  }
+
+  private isMergeableRelationship(relationship: MergeDecision["relationship"]): boolean {
+    return relationship === "duplicate"
+      || relationship === "same_concept_fragment"
+      || relationship === "direct_subsection"
+      || relationship === "definition_expansion";
   }
 
   private async judgeMergedOutput(sourceMaterial: string, candidate: string): Promise<JudgeResult> {

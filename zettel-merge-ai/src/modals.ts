@@ -81,7 +81,7 @@ export class CandidateMergeModal extends Modal {
       });
 
       row.createDiv({
-        text: `${suggestion.decision.risk.toUpperCase()} risk: ${suggestion.decision.reason}`,
+        text: `${suggestion.decision.relationship}; ${suggestion.decision.risk.toUpperCase()} risk: ${suggestion.decision.reason}`,
         cls: "zettel-merge-ai-reason",
       });
     }
@@ -148,6 +148,7 @@ export class CandidateMergeModal extends Modal {
         `Path: ${suggestion.file.path}`,
         `Embedding similarity: ${suggestion.similarity.toFixed(4)}`,
         `Suggestion confidence: ${suggestion.decision.confidence.toFixed(4)}`,
+        `Relationship: ${suggestion.decision.relationship}`,
         `Risk: ${suggestion.decision.risk}`,
         `System reason: ${suggestion.decision.reason}`,
         "",

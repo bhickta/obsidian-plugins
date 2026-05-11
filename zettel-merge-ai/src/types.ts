@@ -92,6 +92,16 @@ export interface MergeDecision {
   confidence: number;
   reason: string;
   risk: "low" | "medium" | "high";
+  relationship:
+    | "duplicate"
+    | "same_concept_fragment"
+    | "direct_subsection"
+    | "definition_expansion"
+    | "broad_context"
+    | "taxonomy"
+    | "example_only"
+    | "separate_concept"
+    | "topic_mismatch";
 }
 
 export interface MergeSuggestion extends SimilarCandidate {
