@@ -19,6 +19,7 @@ export interface ZettelMergeSettings {
   maxFilesToScan: number;
   embeddingBatchSize: number;
   embeddingIndexSaveEvery: number;
+  embeddingYieldEvery: number;
   reviewThreshold: number;
   autoMergeThreshold: number;
   validationThreshold: number;
@@ -58,8 +59,9 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   deleteSourcesAfterMerge: true,
   candidateLimit: 12,
   maxFilesToScan: 300,
-  embeddingBatchSize: 32,
-  embeddingIndexSaveEvery: 100,
+  embeddingBatchSize: 16,
+  embeddingIndexSaveEvery: 250,
+  embeddingYieldEvery: 20,
   reviewThreshold: 0.85,
   autoMergeThreshold: 0.95,
   validationThreshold: 0.98,

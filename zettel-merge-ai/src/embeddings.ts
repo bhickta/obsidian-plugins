@@ -53,13 +53,24 @@ export class EmbeddingIndex {
     const pending: PendingEmbedding[] = [];
     const saveEvery = Math.max(1, this.settings.embeddingIndexSaveEvery);
     const batchSize = Math.max(1, this.settings.embeddingBatchSize);
+    const yieldEvery = Math.max(1, this.settings.embeddingYieldEvery);
     let processed = 0;
     let embedded = 0;
     let reused = 0;
+    let lastProgressAt = 0;
+
+    const progress = (text: string, force = false) => {
+      if (!onProgress) return;
+      const now = Date.now();
+      if (!force && now - lastProgressAt < 500) return;
+      lastProgressAt = now;
+      onProgress(text);
+    };
 
     const flush = async () => {
       if (!pending.length) return;
       const batch = pending.splice(0, pending.length);
+      progress(`Embedding batch of ${batch.length} note(s)...`, true);
       const vectors = await this.embedBatch(batch.map(item => item.source));
       for (let i = 0; i < batch.length; i++) {
         cache.items[batch[i].file.path] = {
@@ -75,10 +86,11 @@ export class EmbeddingIndex {
 
     for (const file of files) {
       processed++;
-      if (onProgress) onProgress(`Indexing ${processed}/${files.length}: ${file.path}`);
+      progress(`Indexing ${processed}/${files.length}: ${file.path}`);
       const existing = cache.items[file.path];
       if (existing && existing.mtime === file.stat.mtime && existing.size === file.stat.size) {
         reused++;
+        if (processed % yieldEvery === 0) await this.yieldToObsidian();
         continue;
       }
 
@@ -97,8 +109,9 @@ export class EmbeddingIndex {
       if (pending.length >= batchSize) await flush();
       if (processed % saveEvery === 0) {
         await this.saveCache(cache);
-        if (onProgress) onProgress(`Checkpoint saved: ${processed}/${files.length} scanned, ${embedded} embedded, ${reused} reused.`);
+        progress(`Checkpoint saved: ${processed}/${files.length} scanned, ${embedded} embedded, ${reused} reused.`, true);
       }
+      if (processed % yieldEvery === 0) await this.yieldToObsidian();
     }
 
     await flush();
@@ -114,7 +127,7 @@ export class EmbeddingIndex {
       built_at: new Date().toISOString(),
     };
     await this.saveCache(cache);
-    if (onProgress) onProgress(`Indexed ${files.length} note(s): ${embedded} updated, ${reused} reused.`);
+    progress(`Indexed ${files.length} note(s): ${embedded} updated, ${reused} reused.`, true);
     return files.length;
   }
 
@@ -246,6 +259,10 @@ export class EmbeddingIndex {
       for (const source of sources) vectors.push(await this.client.embedding(source));
       return vectors;
     }
+  }
+
+  private async yieldToObsidian(): Promise<void> {
+    await new Promise<void>(resolve => window.setTimeout(resolve, 0));
   }
 
   private async embeddingForText(path: string, content: string, persist: boolean, onProgress?: (text: string) => void): Promise<number[]> {
