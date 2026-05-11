@@ -5,6 +5,14 @@ interface ChatOptions {
   temperature?: number;
 }
 
+export interface OpenAIModelInfo {
+  id: string;
+  object?: string;
+  owned_by?: string;
+  type?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export class OpenAICompatibleClient {
   constructor(private settings: ZettelMergeSettings) {}
 
@@ -60,9 +68,21 @@ export class OpenAICompatibleClient {
   }
 
   async listModels(): Promise<string[]> {
+    return (await this.listModelInfos()).map(model => model.id);
+  }
+
+  async listModelInfos(): Promise<OpenAIModelInfo[]> {
     const res = await fetch(this.endpoint("/models"), { headers: this.headers() });
     if (!res.ok) throw new Error(`[${res.status}] ${await res.text()}`);
     const data = await res.json();
-    return (data.data || []).map((model: any) => String(model.id)).filter(Boolean);
+    return (data.data || [])
+      .map((model: any) => ({
+        id: String(model.id || ""),
+        object: typeof model.object === "string" ? model.object : undefined,
+        owned_by: typeof model.owned_by === "string" ? model.owned_by : undefined,
+        type: typeof model.type === "string" ? model.type : undefined,
+        metadata: model.metadata && typeof model.metadata === "object" ? model.metadata : undefined,
+      }))
+      .filter((model: OpenAIModelInfo) => Boolean(model.id));
   }
 }

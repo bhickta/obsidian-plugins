@@ -7,6 +7,10 @@ export interface ZettelMergeSettings {
   apiKey: string;
   chatModel: string;
   embeddingModel: string;
+  cachedChatModels: string[];
+  cachedEmbeddingModels: string[];
+  cachedModelIds: string[];
+  modelsRefreshedAt: string;
   autoSuggestOnOpen: boolean;
   autoMergeEnabled: boolean;
   deleteSourcesAfterMerge: boolean;
@@ -41,6 +45,10 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   apiKey: "",
   chatModel: "local-model",
   embeddingModel: "text-embedding-nomic-embed-text-v1.5",
+  cachedChatModels: [],
+  cachedEmbeddingModels: [],
+  cachedModelIds: [],
+  modelsRefreshedAt: "",
   autoSuggestOnOpen: true,
   autoMergeEnabled: false,
   deleteSourcesAfterMerge: true,

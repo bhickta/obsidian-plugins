@@ -33,6 +33,8 @@ Use any OpenAI-compatible chat and embedding model names exposed by your local s
 
 The API key can be left empty for local servers that do not require authentication.
 
+Use **Refresh available models** in settings to call `GET /models` and populate the chat and embedding dropdowns dynamically. LM Studio's `lms ls` shows models available on disk; the plugin dropdown reflects what the configured OpenAI-compatible server reports.
+
 ## Archive Layout
 
 ```text
