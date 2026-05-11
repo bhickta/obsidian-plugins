@@ -1,4 +1,4 @@
-import { App, Modal, Notice, TFile } from "obsidian";
+import { App, Modal, Notice, Platform, TFile } from "obsidian";
 import { MergeSuggestion } from "./types";
 
 export class ProgressModal extends Modal {
@@ -88,6 +88,21 @@ export class CandidateMergeModal extends Modal {
 
     const footer = contentEl.createDiv({ cls: "zettel-merge-ai-footer" });
     const status = footer.createSpan({ text: `${this.suggestions.length} mergeable candidate(s)`, cls: "zettel-merge-ai-status" });
+    footer.createEl("button", { text: "Copy Selected for Judge" }).onclick = async () => {
+      const selected = this.suggestions.filter(suggestion => this.selected.has(suggestion.file.path));
+      if (!selected.length) {
+        new Notice("No candidates selected.");
+        return;
+      }
+      try {
+        const pack = await this.buildJudgePack(selected);
+        await this.copyToClipboard(pack);
+        new Notice(`Copied judge pack: ${selected.length} candidate(s), ${pack.length.toLocaleString()} chars.`, 8000);
+      } catch (error) {
+        console.error(error);
+        new Notice(`Copy failed: ${(error as Error).message}`, 10000);
+      }
+    };
     footer.createEl("button", { text: "Cancel" }).onclick = () => this.close();
     const mergeBtn = footer.createEl("button", { text: "Merge Selected", cls: "mod-cta" });
     mergeBtn.onclick = async () => {
@@ -108,6 +123,61 @@ export class CandidateMergeModal extends Modal {
         status.setText(`${this.suggestions.length} mergeable candidate(s)`);
       }
     };
+  }
+
+  private async buildJudgePack(selected: MergeSuggestion[]): Promise<string> {
+    const activeContent = await this.app.vault.read(this.active);
+    const lines: string[] = [
+      "# Zettel Merge AI Judge Pack",
+      "",
+      "Task: Judge whether each candidate should be merged into the base note. Focus only on mergeability and information preservation, not link suggestions.",
+      "",
+      `Generated: ${new Date().toISOString()}`,
+      `Base path: ${this.active.path}`,
+      `Candidate count: ${selected.length}`,
+      "",
+      "=== BASE NOTE START ===",
+      activeContent,
+      "=== BASE NOTE END ===",
+      "",
+    ];
+
+    selected.forEach((suggestion, index) => {
+      lines.push(
+        `=== CANDIDATE ${index + 1} START ===`,
+        `Path: ${suggestion.file.path}`,
+        `Embedding similarity: ${suggestion.similarity.toFixed(4)}`,
+        `Suggestion confidence: ${suggestion.decision.confidence.toFixed(4)}`,
+        `Risk: ${suggestion.decision.risk}`,
+        `System reason: ${suggestion.decision.reason}`,
+        "",
+        "Content:",
+        suggestion.content,
+        `=== CANDIDATE ${index + 1} END ===`,
+        "",
+      );
+    });
+
+    return lines.join("\n");
+  }
+
+  private async copyToClipboard(text: string): Promise<void> {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+    } catch {
+      // Fall back to Electron clipboard below.
+    }
+
+    if (!Platform.isMobile) {
+      const { clipboard } = require("electron");
+      clipboard.writeText(text);
+      return;
+    }
+
+    throw new Error("No clipboard API available.");
   }
 
   onClose(): void {

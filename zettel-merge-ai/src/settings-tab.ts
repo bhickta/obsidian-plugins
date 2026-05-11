@@ -97,7 +97,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "Thresholds" });
     this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit", 1, 50);
     this.numberSetting("Max files to scan", "Fallback live-scan cap used before a full embedding index exists.", "maxFilesToScan", 10, 5000);
-    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request. Larger can freeze Obsidian.", "embeddingBatchSize", 1, 128);
+    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request. Larger can freeze Obsidian.", "embeddingBatchSize", 1, 1024);
     this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery", 10, 1000);
     this.numberSetting("Index yield interval", "Pause briefly after this many scanned notes so Obsidian stays responsive.", "embeddingYieldEvery", 1, 200);
     this.numberSetting("Progress update interval", "Seconds between full-index progress UI updates.", "embeddingProgressIntervalSeconds", 1, 120);
