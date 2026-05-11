@@ -58,11 +58,12 @@ export class EmbeddingIndex {
     let embedded = 0;
     let reused = 0;
     let lastProgressAt = 0;
+    const progressIntervalMs = Math.max(1, this.settings.embeddingProgressIntervalSeconds) * 1000;
 
     const progress = (text: string, force = false) => {
       if (!onProgress) return;
       const now = Date.now();
-      if (!force && now - lastProgressAt < 500) return;
+      if (!force && now - lastProgressAt < progressIntervalMs) return;
       lastProgressAt = now;
       onProgress(text);
     };

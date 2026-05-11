@@ -100,6 +100,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request. Larger can freeze Obsidian.", "embeddingBatchSize", 1, 128);
     this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery", 10, 1000);
     this.numberSetting("Index yield interval", "Pause briefly after this many scanned notes so Obsidian stays responsive.", "embeddingYieldEvery", 1, 200);
+    this.numberSetting("Progress update interval", "Seconds between full-index progress UI updates.", "embeddingProgressIntervalSeconds", 1, 120);
     this.numberSetting("Review threshold", "Candidates below this merge confidence are hidden.", "reviewThreshold", 0, 1, 0.01);
     this.numberSetting("Auto-merge threshold", "Auto command only merges candidates at or above this confidence.", "autoMergeThreshold", 0, 1, 0.01);
     this.numberSetting("Validation threshold", "Merge applies only when coverage and judge score meet this value.", "validationThreshold", 0, 1, 0.01);

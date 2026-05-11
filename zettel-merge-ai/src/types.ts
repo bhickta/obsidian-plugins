@@ -20,6 +20,7 @@ export interface ZettelMergeSettings {
   embeddingBatchSize: number;
   embeddingIndexSaveEvery: number;
   embeddingYieldEvery: number;
+  embeddingProgressIntervalSeconds: number;
   reviewThreshold: number;
   autoMergeThreshold: number;
   validationThreshold: number;
@@ -62,6 +63,7 @@ export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   embeddingBatchSize: 16,
   embeddingIndexSaveEvery: 250,
   embeddingYieldEvery: 20,
+  embeddingProgressIntervalSeconds: 30,
   reviewThreshold: 0.85,
   autoMergeThreshold: 0.95,
   validationThreshold: 0.98,
