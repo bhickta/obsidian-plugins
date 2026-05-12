@@ -31,6 +31,10 @@ interface PendingEmbedding {
   size: number;
 }
 
+interface PendingLiveScanEmbedding extends PendingEmbedding {
+  content: string;
+}
+
 export class EmbeddingIndex {
   private cachePath: string;
 
@@ -197,9 +201,37 @@ export class EmbeddingIndex {
     }
 
     const scored: SimilarCandidate[] = [];
+    const pending: PendingLiveScanEmbedding[] = [];
+    const batchSize = Math.max(1, this.settings.embeddingBatchSize);
     let processed = 0;
     let embedded = 0;
     let reused = 0;
+
+    const flush = async () => {
+      if (!pending.length) return;
+      const batch = pending.splice(0, pending.length);
+      if (onProgress) onProgress(`Embedding live-scan batch of ${batch.length} note(s)...`);
+      const vectors = await this.embedBatch(batch.map(item => item.source));
+      for (let i = 0; i < batch.length; i++) {
+        const item = batch[i];
+        const embedding = vectors[i];
+        cache.items[item.file.path] = {
+          hash: item.hash,
+          embedding,
+          updated_at: new Date().toISOString(),
+          mtime: item.mtime,
+          size: item.size,
+        };
+        scored.push({
+          file: item.file,
+          content: item.content,
+          similarity: cosineSimilarity(activeEmbedding, embedding),
+          hash: item.hash,
+        });
+      }
+      embedded += batch.length;
+    };
+
     for (const file of scanFiles) {
       processed++;
       if (onProgress) onProgress(`Checking live-scan cache ${processed}/${scanFiles.length}: ${file.basename}`);
@@ -209,25 +241,19 @@ export class EmbeddingIndex {
       let item = cache.items[file.path];
       if (!item || item.hash !== hash) {
         if (onProgress) onProgress(`Embedding new/changed note ${processed}/${scanFiles.length}: ${file.basename}`);
-        item = {
-          hash,
-          embedding: await this.client.embedding(source),
-          updated_at: new Date().toISOString(),
-          mtime: file.stat.mtime,
-          size: file.stat.size,
-        };
-        cache.items[file.path] = item;
-        embedded++;
+        pending.push({ file, content, source, hash, mtime: file.stat.mtime, size: file.stat.size });
+        if (pending.length >= batchSize) await flush();
       } else {
         reused++;
+        scored.push({
+          file,
+          content,
+          similarity: cosineSimilarity(activeEmbedding, item.embedding),
+          hash,
+        });
       }
-      scored.push({
-        file,
-        content,
-        similarity: cosineSimilarity(activeEmbedding, item.embedding),
-        hash,
-      });
     }
+    await flush();
 
     await this.saveCache(cache);
     if (onProgress) {

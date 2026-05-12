@@ -19,6 +19,12 @@ export function isVisibleMarkdownInScope(file: TFile, rootFolder: string, dataFo
   return !dataRoot || !file.path.startsWith(dataRoot + "/");
 }
 
+export function requireActiveMarkdownFile(app: App): TFile {
+  const active = app.workspace.getActiveFile();
+  if (!active || active.extension !== "md") throw new Error("Open a markdown note first.");
+  return active;
+}
+
 export function sanitizeFileName(name: string): string {
   const cleaned = name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
   return cleaned || "note";

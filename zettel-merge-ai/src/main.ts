@@ -2,8 +2,9 @@ import { Notice, Plugin, TFile } from "obsidian";
 import { CandidateMergeModal, ProgressModal } from "./modals";
 import { MergeEngine } from "./merge-engine";
 import { ZettelMergeSettingTab } from "./settings-tab";
-import { DEFAULT_SETTINGS, ZettelMergeSettings } from "./types";
-import { isVisibleMarkdownInScope } from "./utils";
+import { normalizeSettings } from "./settings";
+import { ZettelMergeSettings, MergeSuggestion } from "./types";
+import { isVisibleMarkdownInScope, requireActiveMarkdownFile } from "./utils";
 
 export default class ZettelMergeAIPlugin extends Plugin {
   settings!: ZettelMergeSettings;
@@ -62,11 +63,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const saved = await this.loadData();
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-    if (!this.settings.suggestionModel) {
-      this.settings.suggestionModel = this.settings.chatModel;
-      await this.saveSettings();
-    }
+    this.settings = normalizeSettings(saved);
   }
 
   async saveSettings(): Promise<void> {
@@ -88,7 +85,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
 
   private async runSuggestCommand(): Promise<void> {
     await this.withProgress("Finding Merge Candidates", async engine => {
-      const active = this.requireActiveNote();
+      const active = requireActiveMarkdownFile(this.app);
       const suggestions = await engine.suggestForActive(false);
       if (suggestions.length) this.openCandidateModal(active, suggestions);
     });
@@ -134,7 +131,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
     this.autoSuggestTimer = window.setTimeout(() => {
       this.autoSuggestTimer = null;
       void this.runSafely(async engine => {
-        const active = this.requireActiveNote();
+        const active = requireActiveMarkdownFile(this.app);
         if (active.path !== file.path) return;
         const suggestions = await engine.suggestForActive(true);
         if (suggestions.length && !this.modalOpen) this.openCandidateModal(active, suggestions);
@@ -142,7 +139,7 @@ export default class ZettelMergeAIPlugin extends Plugin {
     }, 1200);
   }
 
-  private openCandidateModal(active: TFile, suggestions: any[]): void {
+  private openCandidateModal(active: TFile, suggestions: MergeSuggestion[]): void {
     this.modalOpen = true;
     const modal = new CandidateMergeModal(this.app, active, suggestions, async selected => {
       await this.withProgress("Merging Selected Notes", engine => engine.mergeIntoActive(active, selected));
@@ -155,9 +152,4 @@ export default class ZettelMergeAIPlugin extends Plugin {
     modal.open();
   }
 
-  private requireActiveNote(): TFile {
-    const active = this.app.workspace.getActiveFile();
-    if (!active || active.extension !== "md") throw new Error("Open a markdown note first.");
-    return active;
-  }
 }

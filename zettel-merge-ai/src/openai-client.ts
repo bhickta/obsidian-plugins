@@ -7,6 +7,11 @@ interface ChatOptions {
   model?: string;
 }
 
+interface EmbeddingRow {
+  embedding: number[];
+  index?: number;
+}
+
 export interface OpenAIModelInfo {
   id: string;
   object?: string;
@@ -29,7 +34,7 @@ export class OpenAICompatibleClient {
     return headers;
   }
 
-  private async requestJson(path: string, method: string, body?: unknown): Promise<any> {
+  private async requestJson(path: string, method: string, body?: unknown): Promise<unknown> {
     const res = await requestUrl({
       url: this.endpoint(path),
       method,
@@ -47,7 +52,7 @@ export class OpenAICompatibleClient {
   }
 
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const data = await this.requestJson(
+    const data = asRecord(await this.requestJson(
       "/chat/completions",
       "POST",
       {
@@ -55,8 +60,11 @@ export class OpenAICompatibleClient {
         messages,
         temperature: options.temperature ?? 0,
       },
-    );
-    const content = data.choices?.[0]?.message?.content;
+    ));
+    const choices = Array.isArray(data.choices) ? data.choices : [];
+    const first = asRecord(choices[0]);
+    const message = asRecord(first.message);
+    const content = message.content;
     if (typeof content !== "string") throw new Error("Chat response did not include message content.");
     return content;
   }
@@ -72,24 +80,29 @@ export class OpenAICompatibleClient {
   }
 
   async embeddings(inputs: string[]): Promise<number[][]> {
-    const data = await this.requestJson(
+    if (!inputs.length) return [];
+    const data = asRecord(await this.requestJson(
       "/embeddings",
       "POST",
       {
         model: this.settings.embeddingModel,
         input: inputs.length === 1 ? inputs[0] : inputs,
       },
-    );
+    ));
     const rows = Array.isArray(data.data) ? data.data : [];
     if (rows.length !== inputs.length) {
       throw new Error(`Embedding response returned ${rows.length} item(s) for ${inputs.length} input(s).`);
     }
-    const sorted = rows.every((row: any) => typeof row.index === "number")
-      ? [...rows].sort((a: any, b: any) => a.index - b.index)
-      : rows;
-    return sorted.map((row: any) => {
-      if (!Array.isArray(row.embedding)) throw new Error("Embedding response did not include embedding arrays.");
-      return row.embedding.map(Number);
+    const parsedRows = rows.map(parseEmbeddingRow);
+    const sorted = parsedRows.every(row => typeof row.index === "number")
+      ? [...parsedRows].sort((a, b) => (a.index || 0) - (b.index || 0))
+      : parsedRows;
+    return sorted.map(row => {
+      const vector = row.embedding.map(Number);
+      if (vector.some(value => !Number.isFinite(value))) {
+        throw new Error("Embedding response included a non-numeric vector value.");
+      }
+      return vector;
     });
   }
 
@@ -98,15 +111,36 @@ export class OpenAICompatibleClient {
   }
 
   async listModelInfos(): Promise<OpenAIModelInfo[]> {
-    const data = await this.requestJson("/models", "GET");
-    return (data.data || [])
-      .map((model: any) => ({
+    const data = asRecord(await this.requestJson("/models", "GET"));
+    const models = Array.isArray(data.data) ? data.data : [];
+    return models
+      .map(model => asRecord(model))
+      .map(model => ({
         id: String(model.id || ""),
         object: typeof model.object === "string" ? model.object : undefined,
         owned_by: typeof model.owned_by === "string" ? model.owned_by : undefined,
         type: typeof model.type === "string" ? model.type : undefined,
-        metadata: model.metadata && typeof model.metadata === "object" ? model.metadata : undefined,
+        metadata: asOptionalRecord(model.metadata),
       }))
       .filter((model: OpenAIModelInfo) => Boolean(model.id));
   }
+}
+
+function parseEmbeddingRow(value: unknown): EmbeddingRow {
+  const row = asRecord(value);
+  if (!Array.isArray(row.embedding)) throw new Error("Embedding response did not include embedding arrays.");
+  return {
+    embedding: row.embedding.map(Number),
+    index: typeof row.index === "number" ? row.index : undefined,
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asOptionalRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
 }

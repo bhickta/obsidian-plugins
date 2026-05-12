@@ -1,8 +1,13 @@
 import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from "obsidian";
 import ZettelMergeAIPlugin from "./main";
-import { DEFAULT_MERGE_PROMPT, ZettelMergeSettings } from "./types";
+import { DEFAULT_MERGE_PROMPT } from "./types";
 import { OpenAICompatibleClient, OpenAIModelInfo } from "./openai-client";
+import { NUMBER_SETTING_LIMITS } from "./settings";
 import { isVisibleMarkdownInScope, readJson } from "./utils";
+
+type TextSettingKey = "rootFolder" | "dataFolder";
+type ToggleSettingKey = "autoSuggestOnOpen" | "autoMergeEnabled" | "deleteSourcesAfterMerge";
+type NumberSettingKey = keyof typeof NUMBER_SETTING_LIMITS;
 
 export class ZettelMergeSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: ZettelMergeAIPlugin) {
@@ -14,10 +19,21 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.createEl("h2", { text: "Zettel Merge AI" });
 
+    this.renderScopeSettings(containerEl);
+    this.renderServerSettings(containerEl);
+    this.renderAutomationSettings(containerEl);
+    this.renderThresholdSettings(containerEl);
+    this.renderPromptLimitSettings(containerEl);
+    this.renderMergeGuidanceSettings(containerEl);
+  }
+
+  private renderScopeSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "Scope" });
     this.textSetting("Zettelkasten folder", "Only markdown files under this folder are considered.", "rootFolder");
     this.textSetting("Data folder", "Archive, embedding index, and training dataset folder.", "dataFolder");
+  }
 
+  private renderServerSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "OpenAI-compatible server" });
     new Setting(containerEl)
       .setName("Base URL")
@@ -67,7 +83,9 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
       text: `Model list refreshed: ${refreshed}`,
       cls: "setting-item-description",
     });
+  }
 
+  private renderAutomationSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "Automation" });
     new Setting(containerEl)
       .setName("Suggestion mode")
@@ -104,24 +122,30 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     this.toggleSetting("Auto-suggest on note open", "When opening a scoped note, find merge candidates and show the review modal.", "autoSuggestOnOpen");
     this.toggleSetting("Enable auto-merge command", "Allows the auto-merge command to apply high-confidence candidates without the review modal.", "autoMergeEnabled");
     this.toggleSetting("Clean up source notes after merge", "After archive and validation, extracted lines are removed from source notes. A source note is deleted only when no meaningful content remains.", "deleteSourcesAfterMerge");
+  }
 
+  private renderThresholdSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "Thresholds" });
-    this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit", 1, 50);
-    this.numberSetting("Max files to scan", "Fallback live-scan cap used before a full embedding index exists.", "maxFilesToScan", 10, 5000);
-    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request. Larger can freeze Obsidian.", "embeddingBatchSize", 1, 1024);
-    this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery", 10, 1000);
-    this.numberSetting("Index yield interval", "Pause briefly after this many scanned notes so Obsidian stays responsive.", "embeddingYieldEvery", 1, 200);
-    this.numberSetting("Progress update interval", "Seconds between full-index progress UI updates.", "embeddingProgressIntervalSeconds", 1, 120);
-    this.numberSetting("Review threshold", "Candidates below this merge confidence are hidden.", "reviewThreshold", 0, 1, 0.01);
-    this.numberSetting("Auto-merge threshold", "Auto command only merges candidates at or above this confidence.", "autoMergeThreshold", 0, 1, 0.01);
-    this.numberSetting("Validation threshold", "Merge applies only when coverage and judge score meet this value.", "validationThreshold", 0, 1, 0.01);
-    this.numberSetting("Max merge retries", "Retries when validation finds missing information.", "maxMergeRetries", 1, 5);
+    this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit");
+    this.numberSetting("Max files to scan", "Fallback live-scan cap used before a full embedding index exists.", "maxFilesToScan");
+    this.numberSetting("Embedding batch size", "Number of notes sent to /embeddings in each full-index request. Larger can freeze Obsidian.", "embeddingBatchSize");
+    this.numberSetting("Index save interval", "Save full-index progress after this many scanned notes.", "embeddingIndexSaveEvery");
+    this.numberSetting("Index yield interval", "Pause briefly after this many scanned notes so Obsidian stays responsive.", "embeddingYieldEvery");
+    this.numberSetting("Progress update interval", "Seconds between full-index progress UI updates.", "embeddingProgressIntervalSeconds");
+    this.numberSetting("Review threshold", "Candidates below this merge confidence are hidden.", "reviewThreshold");
+    this.numberSetting("Auto-merge threshold", "Auto command only merges candidates at or above this confidence.", "autoMergeThreshold");
+    this.numberSetting("Validation threshold", "Merge applies only when coverage and judge score meet this value.", "validationThreshold");
+    this.numberSetting("Max merge retries", "Retries when validation finds missing information.", "maxMergeRetries");
+  }
 
+  private renderPromptLimitSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "Prompt limits" });
-    this.numberSetting("Embedding source chars", "Chars from each note used for embeddings.", "embeddingSourceChars", 500, 20000);
-    this.numberSetting("Candidate judge chars", "Chars per note sent to the mergeability judge.", "candidateJudgeChars", 500, 10000);
-    this.numberSetting("Max merge input chars", "Hard stop before merge if source text exceeds this size.", "maxMergeInputChars", 5000, 500000);
+    this.numberSetting("Embedding source chars", "Chars from each note used for embeddings.", "embeddingSourceChars");
+    this.numberSetting("Candidate judge chars", "Chars per note sent to the mergeability judge.", "candidateJudgeChars");
+    this.numberSetting("Max merge input chars", "Hard stop before merge if source text exceeds this size.", "maxMergeInputChars");
+  }
 
+  private renderMergeGuidanceSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h3", { text: "Merge guidance" });
     new Setting(containerEl)
       .setName("Guidance")
@@ -144,12 +168,12 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     };
   }
 
-  private textSetting(name: string, desc: string, key: keyof ZettelMergeSettings): void {
+  private textSetting(name: string, desc: string, key: TextSettingKey): void {
     new Setting(this.containerEl)
       .setName(name)
       .setDesc(desc)
       .addText(text => text.setValue(String(this.plugin.settings[key])).onChange(async value => {
-        (this.plugin.settings as any)[key] = value.trim();
+        this.plugin.settings[key] = value.trim();
         await this.plugin.saveSettings();
       }));
   }
@@ -183,17 +207,18 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
         }));
   }
 
-  private toggleSetting(name: string, desc: string, key: keyof ZettelMergeSettings): void {
+  private toggleSetting(name: string, desc: string, key: ToggleSettingKey): void {
     new Setting(this.containerEl)
       .setName(name)
       .setDesc(desc)
       .addToggle(toggle => toggle.setValue(Boolean(this.plugin.settings[key])).onChange(async value => {
-        (this.plugin.settings as any)[key] = value;
+        this.plugin.settings[key] = value;
         await this.plugin.saveSettings();
       }));
   }
 
-  private numberSetting(name: string, desc: string, key: keyof ZettelMergeSettings, min: number, max: number, step = 1): void {
+  private numberSetting(name: string, desc: string, key: NumberSettingKey): void {
+    const { min, max, step } = NUMBER_SETTING_LIMITS[key];
     new Setting(this.containerEl)
       .setName(name)
       .setDesc(desc)
@@ -202,7 +227,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
         .setDynamicTooltip()
         .setValue(Number(this.plugin.settings[key]))
         .onChange(async value => {
-          (this.plugin.settings as any)[key] = value;
+          this.plugin.settings[key] = value;
           await this.plugin.saveSettings();
         }))
       .addText(text => text
@@ -210,7 +235,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
         .onChange(async value => {
           const parsed = Number(value);
           if (!Number.isFinite(parsed)) return;
-          (this.plugin.settings as any)[key] = Math.min(max, Math.max(min, parsed));
+          this.plugin.settings[key] = Math.min(max, Math.max(min, parsed));
           await this.plugin.saveSettings();
         }));
   }
