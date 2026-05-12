@@ -103,7 +103,7 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
 
     this.toggleSetting("Auto-suggest on note open", "When opening a scoped note, find merge candidates and show the review modal.", "autoSuggestOnOpen");
     this.toggleSetting("Enable auto-merge command", "Allows the auto-merge command to apply high-confidence candidates without the review modal.", "autoMergeEnabled");
-    this.toggleSetting("Delete source notes after successful merge", "Sources are deleted from the visible vault only after archive, quality, rollback, and training files are written.", "deleteSourcesAfterMerge");
+    this.toggleSetting("Clean up source notes after merge", "After archive and validation, extracted lines are removed from source notes. A source note is deleted only when no meaningful content remains.", "deleteSourcesAfterMerge");
 
     containerEl.createEl("h3", { text: "Thresholds" });
     this.numberSetting("Candidate limit", "Number of embedding matches sent to the mergeability judge.", "candidateLimit", 1, 50);
@@ -122,9 +122,10 @@ export class ZettelMergeSettingTab extends PluginSettingTab {
     this.numberSetting("Candidate judge chars", "Chars per note sent to the mergeability judge.", "candidateJudgeChars", 500, 10000);
     this.numberSetting("Max merge input chars", "Hard stop before merge if source text exceeds this size.", "maxMergeInputChars", 5000, 500000);
 
-    containerEl.createEl("h3", { text: "Merge prompt" });
+    containerEl.createEl("h3", { text: "Merge guidance" });
     new Setting(containerEl)
-      .setName("System prompt")
+      .setName("Guidance")
+      .setDesc("Used as merge guidance. The plugin still enforces scoped JSON insertions so existing active-note text is not rewritten.")
       .addTextArea(text => {
         text.setValue(this.plugin.settings.mergeSystemPrompt).onChange(async value => {
           this.plugin.settings.mergeSystemPrompt = value;

@@ -116,6 +116,7 @@ export class ArchiveStore {
     attempts: number,
     coverage: CoverageReport,
     judge: JudgeResult,
+    mergeSystemPrompt: string,
     mergeUserPrompt: string,
     proposedAttempts: string[],
   ): Promise<void> {
@@ -139,7 +140,7 @@ export class ArchiveStore {
     await this.writeQuality(job, coverage, judge);
     await this.writeComparison(job, coverage, judge);
     await this.writeRollback(job, []);
-    await this.writeTraining(job, finalContent, mergeUserPrompt, judge, coverage, proposedAttempts);
+    await this.writeTraining(job, finalContent, mergeSystemPrompt, mergeUserPrompt, judge, coverage, proposedAttempts);
     await this.writeManifest(job);
     await this.updateIndex(job);
   }
@@ -193,6 +194,7 @@ export class ArchiveStore {
   private async writeTraining(
     job: MergeJob,
     finalContent: string,
+    mergeSystemPrompt: string,
     mergeUserPrompt: string,
     judge: JudgeResult,
     coverage: CoverageReport,
@@ -215,7 +217,7 @@ export class ArchiveStore {
 
     const sft = {
       messages: [
-        { role: "system", content: this.settings.mergeSystemPrompt },
+        { role: "system", content: mergeSystemPrompt },
         { role: "user", content: mergeUserPrompt },
         { role: "assistant", content: finalContent },
       ],

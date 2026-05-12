@@ -5,21 +5,49 @@ import { OpenAICompatibleClient } from "./openai-client";
 import {
   CoverageReport,
   JudgeResult,
+  MergeLineRange,
   MergeDecision,
   MergeSuggestion,
+  ScopedMergeInsertion,
+  ScopedMergePlan,
   SimilarCandidate,
   ZettelMergeSettings,
 } from "./types";
 import {
   buildCoverageReport,
   compactNote,
+  extractLineRanges,
   formatMissingForRetry,
+  formatLineRanges,
+  hasMeaningfulMarkdown,
   isVisibleMarkdownInScope,
-  stripMarkdownFence,
+  removeLineRanges,
+  sha256,
+  splitMarkdownLines,
 } from "./utils";
 
 interface DecisionsResponse {
   decisions: Array<Partial<MergeDecision>>;
+}
+
+interface NumberedExcerpt {
+  text: string;
+  lastLine: number;
+}
+
+interface SourceExtraction {
+  file: TFile;
+  originalContent: string;
+  extractedContent: string;
+  remainingContent: string;
+  ranges: MergeLineRange[];
+}
+
+interface ScopedMergePlanResponse {
+  insertions?: Array<Partial<ScopedMergeInsertion> & {
+    after_line?: unknown;
+  }>;
+  notes?: unknown;
 }
 
 export class MergeEngine {
@@ -70,11 +98,17 @@ export class MergeEngine {
     const targetContent = await this.app.vault.read(active);
     const sourceContents = await Promise.all(sourceFiles.map(file => this.app.vault.read(file)));
     const decisions = suggestions.map(suggestion => suggestion.decision);
+    const sourceExtractions = suggestions.map((suggestion, index) =>
+      this.buildSourceExtraction(suggestion.file, sourceContents[index], suggestion.decision.sourceLineRanges),
+    );
+    const extractedSourceContents = sourceExtractions.map(extraction => extraction.extractedContent);
+    const sourceMaterial = [targetContent, ...extractedSourceContents].join("\n\n--- SOURCE BREAK ---\n\n");
 
     this.setStatus("Archiving originals...");
     const job = await this.archive.createJob(active, sourceFiles, targetContent, sourceContents, decisions);
 
-    const basePrompt = this.buildMergeUserPrompt(active, targetContent, sourceFiles, sourceContents);
+    const mergeSystemPrompt = this.scopedMergeSystemPrompt();
+    const basePrompt = this.buildMergeUserPrompt(active, targetContent, sourceExtractions);
     const proposedAttempts: string[] = [];
     let finalContent = "";
     let finalCoverage: CoverageReport | null = null;
@@ -84,15 +118,16 @@ export class MergeEngine {
     for (let attempt = 1; attempt <= this.settings.maxMergeRetries; attempt++) {
       this.setStatus(`Merging attempt ${attempt}/${this.settings.maxMergeRetries}...`);
       const prompt = hint ? `${basePrompt}\n\nRETRY REQUIREMENTS:\n${hint}` : basePrompt;
-      const proposed = stripMarkdownFence(await this.client.chat([
-        { role: "system", content: this.settings.mergeSystemPrompt },
+      const rawPlan = await this.client.chatJson<ScopedMergePlanResponse>([
+        { role: "system", content: mergeSystemPrompt },
         { role: "user", content: prompt },
-      ], { temperature: 0 }));
+      ], { temperature: 0 });
+      const plan = this.normalizeScopedMergePlan(rawPlan, targetContent);
+      const proposed = this.applyScopedMergePlan(targetContent, plan);
       proposedAttempts.push(proposed);
-      await this.archive.writeProposed(job, attempt, proposed);
+      await this.archive.writeProposed(job, attempt, this.formatScopedMergeAttempt(plan, proposed));
 
       this.setStatus(`Validating attempt ${attempt}/${this.settings.maxMergeRetries}...`);
-      const sourceMaterial = [targetContent, ...sourceContents].join("\n\n--- SOURCE BREAK ---\n\n");
       const coverage = buildCoverageReport(sourceMaterial, proposed);
       const judge = await this.judgeMergedOutput(sourceMaterial, proposed);
 
@@ -122,24 +157,19 @@ export class MergeEngine {
       proposedAttempts.length,
       finalCoverage,
       finalJudge,
+      mergeSystemPrompt,
       basePrompt,
       proposedAttempts,
     );
 
     this.setStatus("Applying merge...");
+    await this.assertMergeInputsUnchanged(active, targetContent, sourceFiles, sourceContents);
     await this.app.vault.modify(active, finalContent.endsWith("\n") ? finalContent : finalContent + "\n");
-
-    const deletedSources: string[] = [];
-    if (this.settings.deleteSourcesAfterMerge) {
-      for (const source of sourceFiles) {
-        deletedSources.push(source.path);
-        await this.app.vault.delete(source);
-      }
-    }
+    const deletedSources = await this.cleanUpSourceExtractions(sourceExtractions);
 
     await this.archive.markApplied(job, deletedSources);
     this.setStatus("");
-    new Notice(`Merged ${sourceFiles.length} note(s). Archive: ${job.id}`, 10000);
+    new Notice(`Merged extracted lines from ${sourceFiles.length} note(s). Archive: ${job.id}`, 10000);
   }
 
   async autoMergeActive(): Promise<void> {
@@ -177,12 +207,17 @@ export class MergeEngine {
   }
 
   private async judgeCandidates(active: TFile, activeContent: string, candidates: SimilarCandidate[]): Promise<MergeSuggestion[]> {
-    const payload = candidates.map((candidate, index) => ({
-      id: index + 1,
-      path: candidate.file.path,
-      similarity: Number(candidate.similarity.toFixed(4)),
-      note: compactNote(candidate.file.path, candidate.content, this.settings.candidateJudgeChars),
-    }));
+    const visibleLineLimits = new Map<string, number>();
+    const payload = candidates.map((candidate, index) => {
+      const excerpt = this.numberedExcerpt(candidate.file.path, candidate.content, this.settings.candidateJudgeChars);
+      visibleLineLimits.set(candidate.file.path, excerpt.lastLine);
+      return {
+        id: index + 1,
+        path: candidate.file.path,
+        similarity: Number(candidate.similarity.toFixed(4)),
+        numbered_excerpt: excerpt.text,
+      };
+    });
 
     const response = await this.client.chatJson<DecisionsResponse>([
       {
@@ -202,6 +237,11 @@ export class MergeEngine {
               relationship: "one allowed relationship value",
               risk: "low, medium, or high",
               reason: "short reason",
+              source_line_ranges: [{
+                start_line: "1-based inclusive start line from the candidate numbered_excerpt",
+                end_line: "1-based inclusive end line from the candidate numbered_excerpt",
+                reason: "why these exact lines should be extracted",
+              }],
             }],
           },
         }, null, 2),
@@ -224,12 +264,19 @@ export class MergeEngine {
         if (!this.isBroadTopicMode()
           && (relationship === "direct_subsection" || relationship === "definition_expansion")
           && confidence < 0.9) return null;
+        const sourceLineRanges = this.normalizeSourceLineRanges(
+          (raw as any).sourceLineRanges || (raw as any).source_line_ranges || (raw as any).extract_ranges,
+          candidate.content,
+          visibleLineLimits.get(candidate.file.path) || 0,
+        );
+        if (!sourceLineRanges.length) return null;
         const decision: MergeDecision = {
           path: candidate.file.path,
           action: "merge",
           confidence,
           reason: raw.reason || "Model marked this candidate as mergeable.",
           risk: raw.risk === "medium" || raw.risk === "high" ? raw.risk : "low",
+          sourceLineRanges,
           relationship,
         };
         return { ...candidate, decision };
@@ -243,6 +290,10 @@ export class MergeEngine {
       "Return JSON only.",
       "Allowed relationship values: duplicate, same_concept_fragment, direct_subsection, definition_expansion, broad_context, taxonomy, example_only, separate_concept, topic_mismatch.",
       "Do not suggest links. This workflow only merges or skips.",
+      "Candidate notes are provided as numbered_excerpt blocks with 1-based line numbers.",
+      "For every action=merge decision, include source_line_ranges. Each range must use exact inclusive line numbers from that candidate's numbered_excerpt.",
+      "Extract only the lines that should actually be merged into the active note. Leave unrelated lines out.",
+      "If no exact candidate lines should be extracted, return action=skip.",
     ];
 
     if (this.isBroadTopicMode()) {
@@ -347,22 +398,245 @@ export class MergeEngine {
     };
   }
 
-  private buildMergeUserPrompt(active: TFile, targetContent: string, sourceFiles: TFile[], sourceContents: string[]): string {
+  private scopedMergeSystemPrompt(): string {
+    const guidance = this.settings.mergeSystemPrompt.trim();
+    return [
+      "You are a scoped Zettelkasten merge planner.",
+      "Return JSON only.",
+      "You receive the active note with 1-based line numbers and extracted source lines.",
+      "Do not rewrite the active note.",
+      "Return insertion operations only. Each insertion adds Markdown after an existing active-note line.",
+      "Use after_line=0 only when the insertion belongs at the start of the active note.",
+      "Do not edit, reorder, paraphrase, or remove existing active-note lines.",
+      "Every source fact, date, number, name, qualifier, tag, wikilink, quote, and meaningful detail from the extracted lines must be present in the final note unless the active note already contains it.",
+      "Do not use material from source lines that were not extracted.",
+      "Do not add external knowledge.",
+      "If user guidance conflicts with these scoped JSON rules, these scoped JSON rules win.",
+      guidance ? `User merge guidance:\n${guidance}` : "",
+    ].filter(Boolean).join("\n");
+  }
+
+  private buildMergeUserPrompt(active: TFile, targetContent: string, sourceExtractions: SourceExtraction[]): string {
     const sections = [
       `ACTIVE NOTE PATH: ${active.path}`,
-      "ACTIVE NOTE CONTENT:",
-      targetContent,
+      "ACTIVE NOTE CONTENT WITH LINE NUMBERS:",
+      this.numberedNote(active.path, targetContent),
       "",
-      "SOURCE NOTES TO MERGE INTO ACTIVE NOTE:",
+      "SOURCE LINES TO MERGE INTO ACTIVE NOTE:",
     ];
-    for (let i = 0; i < sourceFiles.length; i++) {
-      sections.push(`\n--- SOURCE ${i + 1}: ${sourceFiles[i].path} ---\n${sourceContents[i]}`);
+    for (let i = 0; i < sourceExtractions.length; i++) {
+      const extraction = sourceExtractions[i];
+      sections.push(
+        "",
+        `--- SOURCE ${i + 1}: ${extraction.file.path} ---`,
+        `EXTRACTED RANGES: ${formatLineRanges(extraction.ranges)}`,
+        "EXTRACTED MARKDOWN:",
+        extraction.extractedContent,
+      );
     }
+    sections.push(
+      "",
+      "REQUIRED JSON SCHEMA:",
+      JSON.stringify({
+        insertions: [{
+          after_line: "0 or an active-note line number after which to insert markdown",
+          markdown: "markdown to insert; include only new material needed from extracted lines",
+          reason: "short reason",
+        }],
+        notes: "short explanation",
+      }, null, 2),
+    );
     const prompt = sections.join("\n");
     if (prompt.length > this.settings.maxMergeInputChars) {
       throw new Error(`Merge input is ${prompt.length} characters, above maxMergeInputChars=${this.settings.maxMergeInputChars}. Increase the setting or merge fewer notes.`);
     }
     return prompt;
+  }
+
+  private normalizeSourceLineRanges(input: unknown, content: string, visibleLineLimit: number): MergeLineRange[] {
+    if (!Array.isArray(input)) return [];
+    const totalLines = splitMarkdownLines(content).length;
+    const upperLine = Math.min(totalLines, visibleLineLimit || totalLines);
+    const ranges: MergeLineRange[] = [];
+
+    for (const item of input) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      const startLine = this.asPositiveInteger(row.startLine ?? row.start_line);
+      const endLine = this.asPositiveInteger(row.endLine ?? row.end_line);
+      if (startLine === null || endLine === null) continue;
+      if (startLine > endLine || startLine < 1 || endLine > upperLine) continue;
+      const reason = typeof row.reason === "string" ? row.reason.trim() : undefined;
+      ranges.push({ startLine, endLine, reason });
+    }
+
+    return this.mergeLineRanges(ranges);
+  }
+
+  private normalizeScopedMergePlan(response: ScopedMergePlanResponse, targetContent: string): ScopedMergePlan {
+    const targetLineCount = splitMarkdownLines(targetContent).length;
+    const insertions: ScopedMergeInsertion[] = [];
+    const rows = Array.isArray(response.insertions) ? response.insertions : [];
+
+    for (const row of rows) {
+      const afterLine = this.asNonNegativeInteger(row.afterLine ?? row.after_line);
+      if (afterLine === null || afterLine > targetLineCount) continue;
+      const markdown = typeof row.markdown === "string" ? row.markdown.replace(/^\n+|\n+$/g, "") : "";
+      if (!markdown.trim()) continue;
+      insertions.push({
+        afterLine,
+        markdown,
+        reason: typeof row.reason === "string" ? row.reason.trim() : undefined,
+      });
+    }
+
+    return {
+      insertions,
+      notes: typeof response.notes === "string" ? response.notes : undefined,
+    };
+  }
+
+  private applyScopedMergePlan(targetContent: string, plan: ScopedMergePlan): string {
+    const lines = splitMarkdownLines(targetContent);
+    const ordered = plan.insertions
+      .map((insertion, index) => ({ insertion, index }))
+      .sort((a, b) => b.insertion.afterLine - a.insertion.afterLine || b.index - a.index);
+
+    for (const { insertion } of ordered) {
+      lines.splice(insertion.afterLine, 0, ...splitMarkdownLines(insertion.markdown));
+    }
+
+    return lines.join("\n");
+  }
+
+  private formatScopedMergeAttempt(plan: ScopedMergePlan, finalContent: string): string {
+    return [
+      "# Scoped Merge Attempt",
+      "",
+      "## Insertion Plan",
+      "",
+      "```json",
+      JSON.stringify(plan, null, 2),
+      "```",
+      "",
+      "## Final Active Note",
+      "",
+      finalContent,
+    ].join("\n");
+  }
+
+  private buildSourceExtraction(file: TFile, originalContent: string, ranges: MergeLineRange[]): SourceExtraction {
+    const normalized = this.normalizeSourceLineRanges(
+      ranges,
+      originalContent,
+      splitMarkdownLines(originalContent).length,
+    );
+    if (!normalized.length) throw new Error(`No valid source line ranges for ${file.path}.`);
+    return {
+      file,
+      originalContent,
+      extractedContent: extractLineRanges(originalContent, normalized),
+      remainingContent: removeLineRanges(originalContent, normalized),
+      ranges: normalized,
+    };
+  }
+
+  private async assertMergeInputsUnchanged(
+    active: TFile,
+    targetContent: string,
+    sourceFiles: TFile[],
+    sourceContents: string[],
+  ): Promise<void> {
+    const currentTarget = await this.app.vault.read(active);
+    if (sha256(currentTarget) !== sha256(targetContent)) {
+      throw new Error(`Active note changed before apply: ${active.path}. Run suggestions again.`);
+    }
+
+    for (let i = 0; i < sourceFiles.length; i++) {
+      const currentSource = await this.app.vault.read(sourceFiles[i]);
+      if (sha256(currentSource) !== sha256(sourceContents[i])) {
+        throw new Error(`Source note changed before apply: ${sourceFiles[i].path}. Run suggestions again.`);
+      }
+    }
+  }
+
+  private async cleanUpSourceExtractions(sourceExtractions: SourceExtraction[]): Promise<string[]> {
+    const deletedSources: string[] = [];
+    if (!this.settings.deleteSourcesAfterMerge) return deletedSources;
+
+    for (const extraction of sourceExtractions) {
+      if (hasMeaningfulMarkdown(extraction.remainingContent)) {
+        await this.app.vault.modify(
+          extraction.file,
+          extraction.remainingContent.endsWith("\n") ? extraction.remainingContent : extraction.remainingContent + "\n",
+        );
+      } else {
+        deletedSources.push(extraction.file.path);
+        await this.app.vault.delete(extraction.file);
+      }
+    }
+
+    return deletedSources;
+  }
+
+  private numberedExcerpt(path: string, content: string, maxChars: number): NumberedExcerpt {
+    const numbered = this.numberedNote(path, content);
+    if (numbered.length <= maxChars) {
+      return { text: numbered, lastLine: splitMarkdownLines(content).length };
+    }
+
+    const lines = numbered.split("\n");
+    const out: string[] = [];
+    let used = 0;
+    let lastLine = 0;
+    for (const line of lines) {
+      const nextLength = used + line.length + (out.length ? 1 : 0);
+      if (nextLength > maxChars) break;
+      out.push(line);
+      used = nextLength;
+      const match = line.match(/^\s*(\d+)\s+\|/);
+      if (match) lastLine = Number(match[1]);
+    }
+    out.push(`[truncated after line ${lastLine}]`);
+    return { text: out.join("\n"), lastLine };
+  }
+
+  private numberedNote(path: string, content: string): string {
+    const lines = splitMarkdownLines(content);
+    return [
+      `PATH: ${path}`,
+      "LINES:",
+      ...lines.map((line, index) => `${String(index + 1).padStart(4, " ")} | ${line}`),
+    ].join("\n");
+  }
+
+  private mergeLineRanges(ranges: MergeLineRange[]): MergeLineRange[] {
+    const sorted = [...ranges].sort((a, b) => a.startLine - b.startLine || a.endLine - b.endLine);
+    const merged: MergeLineRange[] = [];
+    for (const range of sorted) {
+      const previous = merged[merged.length - 1];
+      if (previous && range.startLine <= previous.endLine + 1) {
+        previous.endLine = Math.max(previous.endLine, range.endLine);
+        if (range.reason && previous.reason && !previous.reason.includes(range.reason)) {
+          previous.reason = `${previous.reason}; ${range.reason}`;
+        } else if (range.reason && !previous.reason) {
+          previous.reason = range.reason;
+        }
+      } else {
+        merged.push({ ...range });
+      }
+    }
+    return merged;
+  }
+
+  private asPositiveInteger(value: unknown): number | null {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private asNonNegativeInteger(value: unknown): number | null {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
   }
 
   private isValidated(coverage: CoverageReport, judge: JudgeResult): boolean {

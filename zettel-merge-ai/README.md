@@ -9,8 +9,8 @@ The plugin is designed for local-first workflows such as LM Studio / `lms-server
 1. Open a note inside the configured Zettelkasten folder.
 2. Run **Zettel Merge AI: Suggest merge candidates for active note**.
 3. The plugin embeds notes in the configured folder and finds similar candidates.
-4. A chat model judges whether each candidate should be merged or skipped.
-5. Approved candidates are merged into the active note.
+4. A chat model judges whether each candidate should be merged or skipped and names the exact source line ranges to extract.
+5. Approved extracted lines are merged into the active note with scoped insertions; existing active-note text is not rewritten.
 6. Before any visible note is overwritten or deleted, the plugin writes a full archive job under `.zettel-merge-ai/jobs/<job-id>/`.
 7. Training records are appended to `.zettel-merge-ai/datasets/`.
 
@@ -36,7 +36,7 @@ The API key can be left empty for local servers that do not require authenticati
 
 Use **Refresh available models** in settings to call `GET /models` and populate the chat and embedding dropdowns dynamically. LM Studio's `lms ls` shows models available on disk; the plugin dropdown reflects what the configured OpenAI-compatible server reports.
 
-The **Suggestion model** can be different from the main chat model. It only receives compact active/candidate note excerpts and returns strict JSON saying whether each candidate should be merged or skipped. The main **Chat model** is still used for the actual merge and no-loss judge.
+The **Suggestion model** can be different from the main chat model. It receives compact active/candidate note excerpts with candidate line numbers and returns strict JSON saying whether each candidate should be merged or skipped plus the exact source line ranges to extract. The main **Chat model** is still used for the scoped insertion plan and no-loss judge.
 
 ## Suggestion Modes
 
@@ -65,4 +65,4 @@ The **Suggestion model** can be different from the main chat model. It only rece
     preference.jsonl
 ```
 
-Visible source files can be deleted after a successful merge, but originals remain in the job archive for comparison, training, and rollback.
+After a successful scoped merge, extracted lines can be removed from visible source notes. A source note is deleted only when no meaningful content remains, and originals remain in the job archive for comparison, training, and rollback.

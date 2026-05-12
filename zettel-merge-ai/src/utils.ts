@@ -1,6 +1,6 @@
 import { App, normalizePath, TFile } from "obsidian";
 import { createHash } from "crypto";
-import { CoverageReport, TraceItems } from "./types";
+import type { CoverageReport, MergeLineRange, TraceItems } from "./types";
 
 export function normalizeFolder(path: string): string {
   return normalizePath(path || "").replace(/^\/+|\/+$/g, "");
@@ -131,6 +131,39 @@ export function compactNote(path: string, content: string, maxChars: number): st
     headings.length ? `HEADINGS:\n${headings.map(h => `- ${h}`).join("\n")}` : "",
     `EXCERPT:\n${excerpt}`
   ].filter(Boolean).join("\n\n");
+}
+
+export function splitMarkdownLines(content: string): string[] {
+  if (!content) return [];
+  const withoutFinalNewline = content.endsWith("\n") ? content.slice(0, -1) : content;
+  return withoutFinalNewline ? withoutFinalNewline.split("\n") : [];
+}
+
+export function extractLineRanges(content: string, ranges: MergeLineRange[]): string {
+  const lines = splitMarkdownLines(content);
+  return ranges
+    .map(range => lines.slice(range.startLine - 1, range.endLine).join("\n"))
+    .join("\n");
+}
+
+export function removeLineRanges(content: string, ranges: MergeLineRange[]): string {
+  const lines = splitMarkdownLines(content);
+  const remove = new Set<number>();
+  for (const range of ranges) {
+    for (let line = range.startLine; line <= range.endLine; line++) remove.add(line);
+  }
+  return lines.filter((_, index) => !remove.has(index + 1)).join("\n");
+}
+
+export function formatLineRanges(ranges: MergeLineRange[]): string {
+  return ranges.map(range =>
+    range.startLine === range.endLine ? String(range.startLine) : `${range.startLine}-${range.endLine}`,
+  ).join(", ");
+}
+
+export function hasMeaningfulMarkdown(content: string): boolean {
+  const withoutFrontmatter = content.replace(/^---\n[\s\S]*?\n---\n?/, "");
+  return withoutFrontmatter.trim().length > 0;
 }
 
 function unique(values: string[]): string[] {

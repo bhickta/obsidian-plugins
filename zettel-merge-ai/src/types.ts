@@ -34,15 +34,14 @@ export interface ZettelMergeSettings {
 
 export const DEFAULT_MERGE_PROMPT = `You are a strict Zettelkasten note merger.
 
-Merge source notes into the active note with zero information loss.
+Merge only the extracted source lines into the active note with zero information loss.
 
 Rules:
-- Preserve every fact, date, number, named entity, tag, wikilink, heading-level fact, quote, and qualifier from all inputs.
+- Preserve every fact, date, number, named entity, tag, wikilink, heading-level fact, quote, and qualifier from the extracted lines.
 - Do not add external knowledge.
 - De-duplicate only when facts are truly identical.
 - Keep conflicting facts by showing both variants.
-- Preserve the active note's core structure when practical.
-- Output only the final merged Markdown note. No preamble, no analysis, no code fences.`;
+- Preserve the active note's existing text. Add only the minimal new Markdown needed for the extracted lines.`;
 
 export const DEFAULT_SETTINGS: ZettelMergeSettings = {
   rootFolder: "Zettelkasten",
@@ -94,6 +93,7 @@ export interface MergeDecision {
   confidence: number;
   reason: string;
   risk: "low" | "medium" | "high";
+  sourceLineRanges: MergeLineRange[];
   relationship:
     | "duplicate"
     | "same_concept_fragment"
@@ -106,8 +106,25 @@ export interface MergeDecision {
     | "topic_mismatch";
 }
 
+export interface MergeLineRange {
+  startLine: number;
+  endLine: number;
+  reason?: string;
+}
+
 export interface MergeSuggestion extends SimilarCandidate {
   decision: MergeDecision;
+}
+
+export interface ScopedMergeInsertion {
+  afterLine: number;
+  markdown: string;
+  reason?: string;
+}
+
+export interface ScopedMergePlan {
+  insertions: ScopedMergeInsertion[];
+  notes?: string;
 }
 
 export interface TraceItems {

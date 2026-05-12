@@ -1,5 +1,6 @@
 import { App, Modal, Notice, Platform, TFile } from "obsidian";
 import { MergeSuggestion } from "./types";
+import { extractLineRanges, formatLineRanges } from "./utils";
 
 export class ProgressModal extends Modal {
   private statusEl!: HTMLElement;
@@ -84,6 +85,10 @@ export class CandidateMergeModal extends Modal {
         text: `${suggestion.decision.relationship}; ${suggestion.decision.risk.toUpperCase()} risk: ${suggestion.decision.reason}`,
         cls: "zettel-merge-ai-reason",
       });
+      row.createDiv({
+        text: `Extract lines: ${formatLineRanges(suggestion.decision.sourceLineRanges)}`,
+        cls: "zettel-merge-ai-meta",
+      });
     }
 
     const footer = contentEl.createDiv({ cls: "zettel-merge-ai-footer" });
@@ -150,10 +155,11 @@ export class CandidateMergeModal extends Modal {
         `Suggestion confidence: ${suggestion.decision.confidence.toFixed(4)}`,
         `Relationship: ${suggestion.decision.relationship}`,
         `Risk: ${suggestion.decision.risk}`,
+        `Extracted lines: ${formatLineRanges(suggestion.decision.sourceLineRanges)}`,
         `System reason: ${suggestion.decision.reason}`,
         "",
-        "Content:",
-        suggestion.content,
+        "Extracted content:",
+        extractLineRanges(suggestion.content, suggestion.decision.sourceLineRanges),
         `=== CANDIDATE ${index + 1} END ===`,
         "",
       );
@@ -180,7 +186,6 @@ export class CandidateMergeModal extends Modal {
 
     throw new Error("No clipboard API available.");
   }
-
   onClose(): void {
     this.contentEl.empty();
   }
